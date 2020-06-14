@@ -1,0 +1,1390 @@
+---
+title: Analysis and Forecast of Fish Trade Import and Export \break in Norway using time features with Glmnet and Prophet
+author: Damien Dupré 
+date: \today
+params:
+  logo: dot_logo.png
+  cover: dcu_cover.png
+  iblue: 2b4894
+  igray: d4dbde
+documentclass: article
+fontsize: 10
+papersize: a4paper
+output: 
+  IReports::businessReport:
+    keep_tex: TRUE
+    latex_engine: xelatex
+    resetStyleFiles: FALSE
+header-includes: 
+  - \newcommand{\logo}{`r gsub("_", "\\_", params$logo)`}
+  - \newcommand{\cover}{`r gsub("_", "\\_", params$cover)`}
+  - \newcommand{\iblue}{`r params$iblue`}
+  - \newcommand{\igray}{`r params$igray`}
+  - \usepackage{ragged2e}
+include-before:
+  - \renewcommand{\contentsname}{Analysis and Forecast of Fish Trade Import and Export in Norway}
+  - \renewcommand{\pagename}{Page}
+---
+
+```{r setup, include = FALSE}
+# packages ---------------------------------------------------------------------
+library(tidyverse)
+library(rnaturalearth)
+library(sf)
+library(ggpubr)
+library(patchwork)
+library(papaja)
+library(tsibble)
+library(lubridate)
+library(ggExtra)
+library(fishualize)
+library(lubridate)
+library(workflows)
+library(parsnip)
+library(recipes)
+library(yardstick)
+library(glmnet)
+library(tidyquant)
+library(timetk) # Use >= 0.1.3, remotes::install_github("business-science/timetk")
+library(fable)
+library(fabletools)
+library(prophet)
+library(fable.prophet) #remotes::install_github("mitchelloharawild/fable.prophet")
+# options ----------------------------------------------------------------------
+knitr::opts_chunk$set(
+  echo = FALSE,
+  error = FALSE,
+  warning = FALSE,
+  message = FALSE
+  )
+options(scipen = 999)
+# functions --------------------------------------------------------------------
+"scripts/functions.R" %>% here::here() %>% source()
+# data -------------------------------------------------------------------------
+# horse_mackerel_exports #######################################################
+data_hm_exp_raw <- "data/norway_horse_mackerel_exports_raw.csv" %>% read_clean()
+
+data_hm_exp_ts <- data_hm_exp_raw %>% 
+  group_by(year, month) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  ungroup() %>%
+  mutate(time = make_date(year) + months(month)) %>%
+  select(-year, -month) %>% 
+  as_tsibble(index = time)
+
+data_hm_exp_ti <- data_hm_exp_ts %>% 
+  as_tibble()
+
+# scomber_exports ##############################################################
+data_sc_exp_raw <- "data/norway_scomber_exports_raw.csv" %>% read_clean()
+
+data_sc_exp_ts <- data_sc_exp_raw %>% 
+  group_by(year, month) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  ungroup() %>%
+  mutate(time = make_date(year) + months(month)) %>%
+  select(-year, -month) %>% 
+  as_tsibble(index = time)
+
+data_sc_exp_ti <- data_sc_exp_ts %>% 
+  as_tibble()
+# horse_mackerel_imports #######################################################
+data_hm_imp_raw <- "data/norway_horse_mackerel_imports_raw.csv" %>% read_clean()
+
+data_hm_imp_ts <- data_hm_imp_raw %>% 
+  group_by(year, month) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  ungroup() %>%
+  mutate(time = make_date(year) + months(month)) %>%
+  select(-year, -month) %>% 
+  as_tsibble(index = time)
+
+data_hm_imp_ti <- data_hm_imp_ts %>% 
+  as_tibble()
+
+# scomber_imports ##############################################################
+data_sc_imp_raw <- "data/norway_scomber_imports_raw.csv" %>% read_clean()
+
+data_sc_imp_ts <- data_sc_imp_raw %>% 
+  group_by(year, month) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  ungroup() %>%
+  mutate(time = make_date(year) + months(month)) %>%
+  select(-year, -month) %>% 
+  as_tsibble(index = time)
+
+data_sc_imp_ti <- data_sc_imp_ts %>% 
+  as_tibble()
+```
+
+\maketitle
+\tableofcontents
+\addcontentsline{toc}{section}{Contents}
+\clearpage
+\justifying
+
+\section{Introduction}
+
+This report investigate the evolution of fish unit price and implement algorithm to forecast this evolution. Each chapter is dedicated to a specific fish trade analysis which involves a type of fish, a country and its type of trade (import or export). 
+
+Within these chapters, a first section is dedicated to the analysis of the trade history using classic methods and visualisations. A second section is dedicated to the implementation of forecast algorithms. Currently, 2 different forecast algorithm models are implemented: Glmnet and Prophet.
+
+- Glmnet is a generalized linear model via penalized maximum likelihood trained for forecast purpose. The regularization path is computed for the lasso or elasticnet penalty at a grid of values for the regularization parameter lambda. The algorithm is extremely fast, and can exploit sparsity in the input matrix $x$.
+
+- Prophet is a procedure for forecasting time series data based on an additive model where non-linear trends are fit with yearly, weekly, and daily seasonality, plus holiday effects. It works best with time series that have strong seasonal effects and several seasons of historical data. Prophet is robust to missing data and shifts in the trend, and typically handles outliers well.
+
+Finally additional analyses are presented in order to focus on specific points of the analysis such as factors influencing the Unit Price evolution, Seasonality and Trade evolution of specific partners.
+
+\clearpage
+
+\section{Horse Mackerel and Scomber Exports from Norway}
+
+\subsection{Analysis}
+Between `r min(data_hm_exp_raw$year)` and `r max(data_hm_exp_raw$year)`, Norway has exported horse mackerel to `r length(unique(data_hm_exp_raw$trade_partner))` countries worldwide. Data for Scomber are substantially different. Indeed, between `r min(data_sc_exp_raw$year)` and `r max(data_sc_exp_raw$year)`, Norway has exported Scomber to `r length(unique(data_sc_exp_raw$trade_partner))` countries worldwide.
+
+The data collected shows a important discrepancy between these countries regarding the trade history, the level of the price applied and its volatility. 
+
+```{r fig.height=7.5}
+data_hm_exp_summary <- data_hm_exp_raw %>% 
+  dplyr::group_by(trade_partner) %>% 
+  dplyr::summarise(
+    n_price = n(),
+    m_price = mean(unit_price),
+    sd_price = sd(unit_price)
+  ) %>% 
+  replace(is.na(.), 0)
+
+plot_hm_exp_summary <- data_hm_exp_summary %>%
+  mutate(
+    trade_partner = fct_reorder(trade_partner, m_price),
+    m_price = m_price * 20,
+    sd_price = sd_price * 20
+  ) %>%
+  ggplot() +
+  geom_col(aes(trade_partner, n_price), alpha = 0.3) +
+  geom_point(aes(trade_partner, m_price), size = 1) +
+  geom_errorbar(aes(trade_partner, ymin = m_price - sd_price, ymax = m_price + sd_price)) +
+  scale_x_discrete("") +
+  scale_y_continuous(
+    "Number of transaction \nbetween 2012 and 2020 (bar)",
+    sec.axis = sec_axis(
+      ~./20, 
+      name = "Average Unit price \n(pointrange)", 
+      labels = scales::dollar_format()
+    )
+  ) +
+  ggtitle("Horse Mackerel") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 8, face = "bold"),
+    axis.text.y = element_text(size = 6)
+  )
+
+data_sc_exp_summary <- data_sc_exp_raw %>% 
+  dplyr::group_by(trade_partner) %>% 
+  dplyr::summarise(
+    n_price = n(),
+    m_price = mean(unit_price),
+    sd_price = sd(unit_price)
+  ) %>% 
+  replace(is.na(.), 0)
+
+plot_sc_exp_summary <- data_sc_exp_summary %>%
+  mutate(
+    trade_partner = fct_reorder(trade_partner, m_price),
+    m_price = m_price * 20,
+    sd_price = sd_price * 20
+  ) %>%
+  ggplot() +
+  geom_col(aes(trade_partner, n_price), alpha = 0.3) +
+  geom_point(aes(trade_partner, m_price), size = 1) +
+  geom_errorbar(aes(trade_partner, ymin = m_price - sd_price, ymax = m_price + sd_price)) +
+  scale_x_discrete("") +
+  scale_y_continuous(
+    "Number of transaction \nbetween 1998 and 2020 (bar)",
+    sec.axis = sec_axis(
+      ~./20, 
+      name = "Average Unit price \n(pointrange)", 
+      labels = scales::dollar_format()
+    )
+  ) +
+  ggtitle("Scomber") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 8, face = "bold"),
+    axis.text.y = element_text(size = 6)
+  )
+
+plot_hm_exp_summary + plot_sc_exp_summary
+```
+
+In the Figure here above, it is possible to distinguish two different patterns for Horse Mackerel and Scomber fish exports.
+
+For Horse Mackerel trades, countries with a high average price and high volatility such as Lithuania, high average price and low volatility such as France, low average price and high volatility such as Denmark and low average price with low volatility such as Egypt. A second factor is particularly important to take into account, the level of trade can vary between the countries. Some countries have only one or two trades while others have more than 60 trades.
+
+For Scomber, the lower Unit Price of the trade is the less volatility there is expect for Mexico, Qatar and India but these countries have only one trade and can be considered as outliers. It is interesting to observe that the number of transaction according the countries does not influence the average unit price.
+
+```{r fig.height=2}
+world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
+
+data_hm_exp_world <- world %>% 
+  dplyr::right_join(data_hm_exp_summary, by = c("name" = "trade_partner")) %>% 
+  dplyr::mutate(centroid = sf::st_centroid(geometry))
+
+data_sc_exp_world <- world %>% 
+  dplyr::right_join(data_sc_exp_summary, by = c("name" = "trade_partner")) %>% 
+  dplyr::mutate(centroid = sf::st_centroid(geometry))
+
+plot_hm_exp_world <- ggplot() +
+  geom_sf(data = world, size = 0.001) +
+  geom_sf(data = data_hm_exp_world, aes(fill = n_price), size = 0.001) +
+  #geom_sf(data = data_hm_exp_world, aes(geometry = centroid, size = m_price)) +
+  stat_sf_coordinates(data = data_hm_exp_world, aes(color = sd_price), geom = "point", size = 1) +
+  scale_x_continuous("") +
+  scale_y_continuous("") +
+  scale_fill_gradient("Amount of Transactions", low = "lightcoral", high = "darkred") +
+  scale_color_continuous("Transaction Volatility") +
+  guides(
+    fill = guide_colorbar(title.position = "top"),
+    color = guide_colorbar(title.position = "top")
+  ) +
+  ggtitle("Horse Mackerel") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    legend.box = "vertical",
+    legend.direction = "horizontal",
+    axis.title = element_text(size = 8)
+  )
+
+plot_sc_exp_world <- ggplot() +
+  geom_sf(data = world, size = 0.001) +
+  geom_sf(data = data_sc_exp_world, aes(fill = n_price), size = 0.001) +
+  #geom_sf(data = data_sc_exp_world, aes(geometry = centroid, size = m_price)) +
+  stat_sf_coordinates(data = data_sc_exp_world, aes(color = sd_price), geom = "point", size = 1) +
+  scale_x_continuous("") +
+  scale_y_continuous("") +
+  scale_fill_gradient("Amount of Transactions", low = "lightcoral", high = "darkred") +
+  scale_color_continuous("Transaction Volatility") +
+  guides(
+    fill = guide_colorbar(title.position = "top"),
+    color = guide_colorbar(title.position = "top")
+  ) +
+  ggtitle("Scomber") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    legend.box = "vertical",
+    legend.direction = "horizontal",
+    axis.title = element_text(size = 8)
+  )
+
+plot_hm_exp_world + plot_sc_exp_world
+```
+
+The world map representations are summaries of the pointrange/bar plot visualisation of the export trades. The red colour indicates the number of trades (dark red means important trade history) while the blue dot indicates the volatility in the trade (light blue means high volatility). This representation show that there are significant discrepancies between the export countries regardless their distance from Norway or their continent.
+
+Despite these significant differences between trade partners, for the forecast models done in the next sections this bias will not be removed as all the data will be taken into account. The available data are too low in term of sampling frequency (once a month maximum), on a too short period, with not enough data per country. Therefore an analysis country wise is impossible. All the data will be taken into account in the coming sections.
+
+```{r fig.height=3}
+plot_hm_exp_raw <- data_hm_exp_raw %>%
+  mutate(time = make_date(year) + months(month)) %>%
+  as_tsibble(index = time, key = c(trade_partner)) %>% 
+  ggplot(aes(time, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "loess", span = 1) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  add_fishape(
+    family = "Carangidae",
+    option = "Caranx_melampygus",
+    xmin = as.Date("2014-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+plot_sc_exp_raw <- data_sc_exp_raw %>%
+  group_by(year, month, trade_partner) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  mutate(time = make_date(year) + months(month)) %>%
+  as_tsibble(index = time, key = c(trade_partner)) %>% 
+  ggplot(aes(time, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "loess", span = 1) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  add_fishape(
+    family = "Scombridae",
+    option = "Thunnus_albacares",
+    xmin = as.Date("2004-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+plot_hm_exp_raw + plot_sc_exp_raw
+```
+
+The trend of the evolution of Horse Mackerel unit price since `r min(data_hm_exp_raw$year)` indicates following a slight parabolic inverse trend with a valley (negative peak) in 2016 whereas the trend of the evolution of Scomber unit price since `r min(data_sc_exp_raw$year)` indicates following a slight parabolic normal trend with a peak around 2010.
+
+\subsection{Glmnet Algorithm Forecast}
+In order to forecast the evolution of fish price according the time, the existing data are split in two sections: the train region which will be used to build the forecast model and the test region which will be used compare the data predicted with the actual data.
+
+```{r}
+# horse makrel -----------------------------------------------------------------
+train_tbl <- data_hm_exp_ti %>% filter(time < ymd("2018-01-01"))
+test_tbl <- data_hm_exp_ti %>% filter(time > ymd("2018-01-01"))
+
+recipe_spec_timeseries <- recipe(unit_price ~ ., data = train_tbl) %>%
+  step_timeseries_signature(time) 
+
+recipe_spec_final <- recipe_spec_timeseries %>%
+  step_rm(time) %>%
+  step_rm(contains("iso"), 
+          contains("second"), contains("minute"), contains("hour"),
+          contains("am.pm"), contains("xts")) %>%
+  step_normalize(contains("index.num"), time_year) %>%
+  step_interact(~ time_month.lbl * time_day) %>%
+  step_interact(~ time_month.lbl * time_mweek) %>%
+  step_interact(~ time_month.lbl * time_wday.lbl * time_yday) %>%
+  step_dummy(contains("lbl"), one_hot = TRUE) 
+
+forecast_hm <- bake(prep(recipe_spec_final), new_data = train_tbl)
+
+model_spec_glmnet <- linear_reg(mode = "regression", penalty = 0.01) %>%
+  set_engine("glmnet")
+
+workflow_glmnet <- workflow() %>%
+  add_recipe(recipe_spec_final) %>%
+  add_model(model_spec_glmnet)
+
+workflow_trained <- workflow_glmnet %>% fit(data = train_tbl)
+
+prediction_tbl <- workflow_trained %>% 
+  predict(test_tbl) %>%
+  bind_cols(test_tbl)
+
+metrics_hm <- prediction_tbl %>% 
+  metrics(unit_price, .pred) %>% 
+  select(-.estimator) %>% 
+  mutate(.estimate = round(.estimate, 2))
+
+idx <- data_hm_exp_ti %>% tk_index()
+
+idx_future <- idx %>% tk_make_future_timeseries(n_future = 24)
+
+future_tbl <- tibble(time = idx_future) 
+
+future_predictions_tbl <- workflow_glmnet %>% 
+  fit(data = data_hm_exp_ti) %>%
+  predict(future_tbl) %>%
+  bind_cols(future_tbl)
+
+plot_hm_exp_ti <- data_hm_exp_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_rect(
+    xmin = as.numeric(ymd("2018-01-01")),
+    xmax = as.numeric(ymd("2020-03-01")),
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "gray",
+    alpha = 0.01
+  ) +
+  geom_rect(
+    xmin = as.numeric(ymd("2020-03-01")),
+    xmax = +Inf,
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "lightblue",
+    alpha = 0.01
+  ) +
+  annotate("text", x = ymd("2014-01-01"), y = 2.5, label = "Train\nRegion") +
+  annotate("text", x = ymd("2019-01-01"), y = 2.5, label = "Test\nRegion") +
+  annotate("text", x = ymd("2021-03-01"), y = 2.5, label = "Forecast\nRegion") +
+  geom_point(alpha = 0.25) + 
+  geom_point(aes(x = time, y = .pred), data = future_predictions_tbl, alpha = 0.5, color = "red") +
+  geom_smooth(aes(x = time, y = .pred), data = future_predictions_tbl, method = "loess", formula = y ~ x) + 
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  add_fishape(
+    family = "Carangidae",
+    option = "Caranx_melampygus",
+    xmin = as.Date("2012-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+# scomber ----------------------------------------------------------------------
+train_tbl <- data_sc_exp_ti %>% filter(time < ymd("2018-01-01"))
+test_tbl <- data_sc_exp_ti %>% filter(time > ymd("2018-01-01"))
+
+recipe_spec_timeseries <- recipe(unit_price ~ ., data = train_tbl) %>%
+  step_timeseries_signature(time) 
+
+recipe_spec_final <- recipe_spec_timeseries %>%
+  step_rm(time) %>%
+  step_rm(contains("iso"), 
+          contains("second"), contains("minute"), contains("hour"),
+          contains("am.pm"), contains("xts")) %>%
+  step_normalize(contains("index.num"), time_year) %>%
+  step_interact(~ time_month.lbl * time_day) %>%
+  step_interact(~ time_month.lbl * time_mweek) %>%
+  step_interact(~ time_month.lbl * time_wday.lbl * time_yday) %>%
+  step_dummy(contains("lbl"), one_hot = TRUE) 
+
+forecast_sc <- bake(prep(recipe_spec_final), new_data = train_tbl)
+
+model_spec_glmnet <- linear_reg(mode = "regression", penalty = 0.01) %>%
+  set_engine("glmnet")
+
+workflow_glmnet <- workflow() %>%
+  add_recipe(recipe_spec_final) %>%
+  add_model(model_spec_glmnet)
+
+workflow_trained <- workflow_glmnet %>% fit(data = train_tbl)
+
+prediction_tbl <- workflow_trained %>% 
+  predict(test_tbl) %>%
+  bind_cols(test_tbl)
+
+metrics_sc <- prediction_tbl %>% 
+  metrics(unit_price, .pred) %>% 
+  select(-.estimator) %>% 
+  mutate(.estimate = round(.estimate, 2))
+
+idx <- data_sc_exp_ti %>% tk_index()
+
+idx_future <- idx %>% tk_make_future_timeseries(n_future = 24)
+
+future_tbl <- tibble(time = idx_future) 
+
+future_predictions_tbl <- workflow_glmnet %>% 
+  fit(data = data_sc_exp_ti) %>%
+  predict(future_tbl) %>%
+  bind_cols(future_tbl)
+
+plot_sc_exp_ti <- data_sc_exp_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_rect(
+    xmin = as.numeric(ymd("2018-01-01")),
+    xmax = as.numeric(ymd("2020-03-01")),
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "gray",
+    alpha = 0.01
+  ) +
+  geom_rect(
+    xmin = as.numeric(ymd("2020-03-01")),
+    xmax = +Inf,
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "lightblue",
+    alpha = 0.01
+  ) +
+  annotate("text", x = ymd("2008-01-01"), y = 3.5, label = "Train\nRegion") +
+  annotate("text", x = ymd("2019-01-01"), y = 3.5, label = "Test\nRegion") +
+  annotate("text", x = ymd("2021-03-01"), y = 3.5, label = "Forecast\nRegion") +
+  geom_point(alpha = 0.25) + 
+  geom_point(aes(x = time, y = .pred), data = future_predictions_tbl, alpha = 0.5, color = "red") +
+  geom_smooth(aes(x = time, y = .pred), data = future_predictions_tbl, method = "loess", formula = y ~ x) + 
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  add_fishape(
+    family = "Scombridae",
+    option = "Thunnus_albacares",
+    xmin = as.Date("2000-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+```
+
+In order to process this forecasting model, `r ncol(forecast_hm)-1` time features are extracted and used to predict the evolution of the Horse Mackerel unit price and `r ncol(forecast_sc)-1` time features are extracted and used to predict the evolution of the Scomber unit price.
+
+By selecting a test region corresponding to the last two years (i.e., from 2018 to 2020), it is possible to compare the forecast accuracy with the actual Average unit price values. The most used indicators are $RMSE$ and $MAE$. Root Mean Square Error (RMSE) is the standard deviation of the residuals (prediction errors). Residuals are a measure of how far from the regression line data points are; RMSE is a measure of how spread out these residuals are. In other words, it tells you how concentrated the data is around the line of best fit. Mean Absolute Error (MAE) is a measure of errors between paired observations expressing the same phenomenon.  This is known as a scale-dependent accuracy measure and therefore cannot be used to make comparisons between series using different scales. The closer to 0 is the $RMSE$ and $MAE$ value, the better. In parallel, the $R^2$ indicator also ranges from 0 to 1 but the closer to 1 is the value, the better.
+
+Here, for Horse Mackerel unit price prediction: $RMSE_{hm} =$ `r metrics_hm[[1,2]]` and $MAE_{hm} =$ `r metrics_hm[[3,2]]`. These results are encouraging but could be largely be improved. The model explains $R^2_{hm} =$ `r scales::percent(metrics_hm[[2,2]])` of the variance of the Horse Mackerel unit price variation.
+
+For the Scomber unit price prediction: $RMSE_{sc} =$ `r metrics_sc[[1,2]]` and $MAE_{sc} =$ `r metrics_sc[[3,2]]`. These results are not as good as those for the Horse Mackerel and is explain by the amount of data available and their larger variability. The model explains $R^2_{sc} =$ `r scales::percent(metrics_sc[[2,2]])` of the variance of the Scomber unit price variation.
+
+Based on the model previously test, a forecast of the 24 next months is performed. Even if the accuracy of the forecast model on the test table is low, it is still possible to use it to forecast the price within 2 years. 
+
+```{r fig.height=3}
+plot_hm_exp_ti
+```
+
+In the case of the Horse Mackerel unit price prediction, The model reveals a sharp decrease in 2020 and a rebound from 2021 followed by a stabilization of the prices at $1.60.
+
+```{r fig.height=3}
+plot_sc_exp_ti
+```
+
+In the case of the Scomber unit price prediction, The model reveals a moderate decrease in 2020 and a rebound from 2021.
+
+\subsection{Prophet Algorithm Forecast}
+
+As the glmnet algorithm, the prophet decomposition extract the temporal trends, seasonality, multiplicative factor and their prediction residuals.
+
+```{r fig.height=3}
+fit <- data_hm_exp_ts %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  )
+
+components_hm <- fabletools::components(fit) %>%
+  autoplot() +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price",
+    labels = scales::dollar_format()
+  ) +
+  labs(title = "Horse Mackerel", subtitle = "") +
+  theme_minimal() +
+  theme(
+    strip.text.y = element_blank(),
+    axis.text.y = element_text(size = 8)
+  )
+
+fit_hm <- fit %>% 
+  forecast(h = "24 months") %>% 
+  autoplot(data_hm_exp_ts) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  add_fishape(
+    family = "Carangidae",
+    option = "Caranx_melampygus",
+    xmin = as.Date("2014-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+fit <- data_sc_exp_ts %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  )
+
+components_sc <- fabletools::components(fit) %>%
+  autoplot() +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price",
+    labels = scales::dollar_format()
+  ) +
+  labs(title = "Scomber", subtitle = "") +
+  theme_minimal() +
+  theme(
+    strip.text.y = element_text(size = 8, angle = 0),
+    axis.text.y = element_text(size = 8)
+  )
+
+fit_sc <- fit %>% 
+  forecast(h = "24 months") %>% 
+  autoplot(data_sc_exp_ts) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  add_fishape(
+    family = "Scombridae",
+    option = "Thunnus_albacares",
+    xmin = as.Date("2010-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+components_hm + components_sc
+```
+
+```{r}
+fit_accuracy_hm <- data_hm_exp_ts %>% 
+  filter(time < ymd("2018-01-01")) %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  ) %>% 
+  forecast(h = "24 months") %>% 
+  accuracy(data_hm_exp_ts) %>% 
+  mutate_if(is.numeric, round,2)
+
+fit_accuracy_sc <- data_sc_exp_ts %>% 
+  filter(time < ymd("2018-01-01")) %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  ) %>% 
+  forecast(h = "24 months") %>% 
+  accuracy(data_sc_exp_ts) %>% 
+  mutate_if(is.numeric, round,2)
+```
+
+In term of algorithm validation $RMSE$ and $MAE$ can be calculated from the original data. For Horse Mackerel prediction, $RMSE_{hm} =$ `r fit_accuracy_hm[[4]]` and $MAE_{hm} =$ `r fit_accuracy_hm[[5]]`, which is better than the glmnet algorithm. For Scomber prediction, $RMSE_{sc} =$ `r fit_accuracy_sc[[4]]` and $MAE_{sc} =$ `r fit_accuracy_sc[[5]]`.
+
+The result of the forecast by Prophet uses the seasonality of the price evolution (see Additional Analyses section) as well as the overall trend.
+
+```{r fig.height=3}
+fit_hm
+```
+
+For Horse Mackerel, the prediction reveals a decrease of the fish price from February to November with a price in 2022 slightly higher than 2021. 
+
+```{r fig.height=3}
+fit_sc
+```
+
+For Scomber, the prediction reveals a decrease of the fish price until 2022 with seasonal changes. 
+
+\subsection{Additional Analyses}
+
+The difference between countries that are historic and recurrent trade partner with countries who have only several past trade is highly relevant. Indeed we can imagine that price establishment is build on a commercial relationship between the countries, if a country has no history, the average price paid is likely to be higher than historical trade partners which will bias the forecast of the evolution.
+
+```{r fig.height=3}
+data_hm_exp_lm <- lm(m_price ~ n_price, data_hm_exp_summary) %>% 
+  papaja::apa_print()
+
+plot_hm_exp_summary <- data_hm_exp_summary %>% 
+  ggplot(aes(n_price, m_price)) + 
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  scale_x_continuous("Number of transaction \nwith the trade partner") +
+  scale_y_continuous("Average unit price", labels = scales::dollar_format()) +
+  ggtitle("Horse Mackerel") +
+  theme_minimal()
+
+data_sc_exp_lm <- lm(m_price ~ n_price, data_sc_exp_summary) %>% 
+  papaja::apa_print()
+
+plot_sc_exp_summary <- data_sc_exp_summary %>% 
+  ggplot(aes(n_price, m_price)) + 
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  scale_x_continuous("Number of transaction \nwith the trade partner") +
+  scale_y_continuous("Average unit price", labels = scales::dollar_format()) +
+  ggtitle("Scomber") + 
+  theme_minimal()
+
+plot_hm_exp_summary + plot_sc_exp_summary
+```
+
+However the results show that the number of trade has no significant relationship with the average unit price of Horse Mackerel trade (`r data_hm_exp_lm$full_result$modelfit$r2`) and Scomber trade (`r data_sc_exp_lm$full_result$modelfit$r2`).
+
+```{r fig.height=3}
+data_hm_exp_lm <- lm(unit_price ~ log10(primary_quantity), data_hm_exp_raw) %>% 
+  papaja::apa_print()
+
+plot_hm_exp_raw <- data_hm_exp_raw %>% 
+  ggplot(aes(primary_quantity, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  #stat_regline_equation() +
+  scale_x_log10("Unit quantity (log)", labels = scales::comma) +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  theme_minimal()
+
+data_sc_exp_lm <- lm(unit_price ~ log10(primary_quantity), data_sc_exp_raw) %>% 
+  papaja::apa_print()
+
+plot_sc_exp_raw <- data_sc_exp_raw %>% 
+  ggplot(aes(primary_quantity, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  #stat_regline_equation() +
+  scale_x_log10("Unit quantity (log)", labels = scales::comma) +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  theme_minimal()
+
+plot_hm_exp_raw + plot_sc_exp_raw
+```
+
+Another possible bias involved in trade relationship is the possible relationship between quantity and unit price. It seems logical to believe that countries buying more will have more leverage to negotiate their unit price. The results reveals a weak but significant relationship between the unit quantity ordered on a log scale and Horse Mackerel unit price (`r data_hm_exp_lm$full_result$modelfit$r2`) as well as Scomber unit price (`r data_sc_exp_lm$full_result$modelfit$r2`).
+
+A future investigation would be to try to understand the factors explaining why certain countries have a high average price and others a low average price (beside the the number of trade).
+
+\clearpage
+
+\section{Horse Mackerel and Scomber Imports by Norway}
+
+\subsection{Analysis}
+Between `r min(data_hm_imp_raw$year)` and `r max(data_hm_imp_raw$year)`, Norway has imported Horse Mackerel from `r length(unique(data_hm_imp_raw$trade_partner))` countries worldwide. Data for Scomber are substantially different. Indeed, between `r min(data_sc_imp_raw$year)` and `r max(data_sc_imp_raw$year)`, Norway has imported Scomber from `r length(unique(data_sc_imp_raw$trade_partner))` countries worldwide.
+
+Similarly as the export, the data collected shows a important discrepancy between these countries regarding the trade history, the level of the price applied and its volatility. 
+
+```{r fig.height=7.5}
+data_hm_imp_summary <- data_hm_imp_raw %>% 
+  dplyr::group_by(trade_partner) %>% 
+  dplyr::summarise(
+    n_price = n(),
+    m_price = mean(unit_price),
+    sd_price = sd(unit_price)
+  ) %>% 
+  replace(is.na(.), 0)
+
+plot_hm_imp_summary <- data_hm_imp_summary %>%
+  mutate(
+    trade_partner = fct_reorder(trade_partner, m_price),
+    m_price = m_price * 20,
+    sd_price = sd_price * 20
+  ) %>%
+  ggplot() +
+  geom_col(aes(trade_partner, n_price), alpha = 0.3) +
+  geom_point(aes(trade_partner, m_price), size = 1) +
+  geom_errorbar(aes(trade_partner, ymin = m_price - sd_price, ymax = m_price + sd_price)) +
+  scale_x_discrete("") +
+  scale_y_continuous(
+    "Number of transaction \nbetween 2012 and 2020 (bar)",
+    sec.axis = sec_axis(
+      ~./20, 
+      name = "Average Unit price \n(pointrange)", 
+      labels = scales::dollar_format()
+    )
+  ) +
+  ggtitle("Horse Mackerel") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 8, face = "bold"),
+    axis.text.y = element_text(size = 6)
+  )
+
+data_sc_imp_summary <- data_sc_imp_raw %>% 
+  dplyr::group_by(trade_partner) %>% 
+  dplyr::summarise(
+    n_price = n(),
+    m_price = mean(unit_price),
+    sd_price = sd(unit_price)
+  ) %>% 
+  replace(is.na(.), 0)
+
+plot_sc_imp_summary <- data_sc_imp_summary %>%
+  mutate(
+    trade_partner = fct_reorder(trade_partner, m_price),
+    m_price = m_price * 20,
+    sd_price = sd_price * 20
+  ) %>%
+  ggplot() +
+  geom_col(aes(trade_partner, n_price), alpha = 0.3) +
+  geom_point(aes(trade_partner, m_price), size = 1) +
+  geom_errorbar(aes(trade_partner, ymin = m_price - sd_price, ymax = m_price + sd_price)) +
+  scale_x_discrete("") +
+  scale_y_continuous(
+    "Number of transaction \nbetween 1998 and 2020 (bar)",
+    sec.axis = sec_axis(
+      ~./20, 
+      name = "Average Unit price \n(pointrange)", 
+      labels = scales::dollar_format()
+    )
+  ) +
+  ggtitle("Scomber") +
+  coord_flip() +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 8, face = "bold"),
+    axis.text.y = element_text(size = 6)
+  )
+
+plot_hm_imp_summary + plot_sc_imp_summary
+```
+
+For Horse Mackerel trades, countries with a high average price and high volatility such as Turkey, Vietnam and the Netherlands, high average price and low volatility such as Spain and Germany, low average price and high volatility such as Ireland and low average price with low volatility such as the United Kingdom. In a similar way as the export of Horse Mackerel, the level of trade can vary between the countries and is particularly important to take into account. Some countries have only one or two trades while others have more than 20 trades.
+
+For Scomber, it is possible to identify the same pattern:
+ - high price/ high volatility (such as  Vietnam)
+ - high price/ low volatility (such as Belgium and Morocco)
+ - low price/ high volatility (such as the United States)
+ - low price/ low volatility (such as Jordan and Romania)
+
+```{r fig.height=2}
+world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
+
+data_hm_imp_world <- world %>% 
+  dplyr::right_join(data_hm_imp_summary, by = c("name" = "trade_partner")) %>% 
+  dplyr::mutate(centroid = sf::st_centroid(geometry))
+
+data_sc_imp_world <- world %>% 
+  dplyr::right_join(data_sc_imp_summary, by = c("name" = "trade_partner")) %>% 
+  dplyr::mutate(centroid = sf::st_centroid(geometry))
+
+plot_hm_imp_world <- ggplot() +
+  geom_sf(data = world, size = 0.001) +
+  geom_sf(data = data_hm_imp_world, aes(fill = n_price), size = 0.001) +
+  #geom_sf(data = data_hm_imp_world, aes(geometry = centroid, size = m_price)) +
+  stat_sf_coordinates(data = data_hm_imp_world, aes(color = sd_price), geom = "point", size = 1) +
+  scale_x_continuous("") +
+  scale_y_continuous("") +
+  scale_fill_gradient("Amount of Transactions", low = "lightcoral", high = "darkred") +
+  scale_color_continuous("Transaction Volatility") +
+  guides(
+    fill = guide_colorbar(title.position = "top"),
+    color = guide_colorbar(title.position = "top")
+  ) +
+  ggtitle("Horse Mackerel") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    legend.box = "vertical",
+    legend.direction = "horizontal",
+    axis.title = element_text(size = 8)
+  )
+
+plot_sc_imp_world <- ggplot() +
+  geom_sf(data = world, size = 0.001) +
+  geom_sf(data = data_sc_imp_world, aes(fill = n_price), size = 0.001) +
+  #geom_sf(data = data_sc_imp_world, aes(geometry = centroid, size = m_price)) +
+  stat_sf_coordinates(data = data_sc_imp_world, aes(color = sd_price), geom = "point", size = 1) +
+  scale_x_continuous("") +
+  scale_y_continuous("") +
+  scale_fill_gradient("Amount of Transactions", low = "lightcoral", high = "darkred") +
+  scale_color_continuous("Transaction Volatility") +
+  guides(
+    fill = guide_colorbar(title.position = "top"),
+    color = guide_colorbar(title.position = "top")
+  ) +
+  ggtitle("Scomber") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    legend.box = "vertical",
+    legend.direction = "horizontal",
+    axis.title = element_text(size = 8)
+  )
+
+plot_hm_imp_world + plot_sc_imp_world
+```
+
+The world map representations are summaries of the pointrange/bar plot visualisation of the import trades. The red colour indicates the number of trades (dark red means important trade history) while the blue dot indicates the volatility in the trade (light blue means high volatility). This representation show that there are significant discrepancies between the type of fish in term of country partner and trading history.
+
+In a similar way as it has been done for the export forecast, all the data will be taken into account in the coming sections. Specific effects and characteristic of countries will not be taken into account and an average unit price per month is applied for the overall trade partners.
+
+```{r fig.height=3}
+plot_hm_imp_raw <- data_hm_imp_raw %>%
+  mutate(time = make_date(year) + months(month)) %>%
+  as_tsibble(index = time, key = c(trade_partner)) %>% 
+  ggplot(aes(time, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "loess", span = 1) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  add_fishape(
+    family = "Carangidae",
+    option = "Caranx_melampygus",
+    xmin = as.Date("2014-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+plot_sc_imp_raw <- data_sc_imp_raw %>%
+  group_by(year, month, trade_partner) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  mutate(time = make_date(year) + months(month)) %>%
+  as_tsibble(index = time, key = c(trade_partner)) %>% 
+  ggplot(aes(time, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "loess", span = 1) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  add_fishape(
+    family = "Scombridae",
+    option = "Thunnus_albacares",
+    xmin = as.Date("2004-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+plot_hm_imp_raw + plot_sc_imp_raw
+```
+
+The trend of the evolution of Horse Mackerel unit price since `r min(data_hm_imp_raw$year)` indicates a slow but continuous decrease whereas the trend of the evolution of Scomber unit price since `r min(data_sc_imp_raw$year)` increased since 2000 and are now stabilized with a slight decrease.
+
+\subsection{Glmnet Algorithm Forecast}
+In order to forecast the evolution of fish price according the time, the existing data are split in two sections: the train region which will be used to build the forecast model and the test region which will be used compare the data predicted with the actual data.
+
+```{r}
+# horse makrel -----------------------------------------------------------------
+train_tbl <- data_hm_imp_ti %>% filter(time < ymd("2018-01-01"))
+test_tbl <- data_hm_imp_ti %>% filter(time > ymd("2018-01-01"))
+
+recipe_spec_timeseries <- recipe(unit_price ~ ., data = train_tbl) %>%
+  step_timeseries_signature(time) 
+
+recipe_spec_final <- recipe_spec_timeseries %>%
+  step_rm(time) %>%
+  step_rm(contains("iso"), 
+          contains("second"), contains("minute"), contains("hour"),
+          contains("am.pm"), contains("xts")) %>%
+  step_normalize(contains("index.num"), time_year) %>%
+  step_interact(~ time_month.lbl * time_day) %>%
+  step_interact(~ time_month.lbl * time_mweek) %>%
+  step_interact(~ time_month.lbl * time_wday.lbl * time_yday) %>%
+  step_dummy(contains("lbl"), one_hot = TRUE) 
+
+forecast_hm <- bake(prep(recipe_spec_final), new_data = train_tbl)
+
+model_spec_glmnet <- linear_reg(mode = "regression", penalty = 0.01) %>%
+  set_engine("glmnet")
+
+workflow_glmnet <- workflow() %>%
+  add_recipe(recipe_spec_final) %>%
+  add_model(model_spec_glmnet)
+
+workflow_trained <- workflow_glmnet %>% fit(data = train_tbl)
+
+prediction_tbl <- workflow_trained %>% 
+  predict(test_tbl) %>%
+  bind_cols(test_tbl)
+
+metrics_hm <- prediction_tbl %>% 
+  metrics(unit_price, .pred) %>% 
+  select(-.estimator) %>% 
+  mutate(.estimate = round(.estimate, 2))
+
+idx <- data_hm_imp_ti %>% tk_index()
+
+idx_future <- idx %>% tk_make_future_timeseries(n_future = 12)
+
+future_tbl <- tibble(time = idx_future) 
+
+future_predictions_tbl <- workflow_glmnet %>% 
+  fit(data = data_hm_imp_ti) %>%
+  predict(future_tbl) %>%
+  bind_cols(future_tbl)
+
+plot_hm_imp_ti <- data_hm_imp_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_rect(
+    xmin = as.numeric(ymd("2018-01-01")),
+    xmax = as.numeric(ymd("2020-03-01")),
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "gray",
+    alpha = 0.01
+  ) +
+  geom_rect(
+    xmin = as.numeric(ymd("2020-03-01")),
+    xmax = +Inf,
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "lightblue",
+    alpha = 0.01
+  ) +
+  annotate("text", x = ymd("2014-01-01"), y = 5, label = "Train\nRegion") +
+  annotate("text", x = ymd("2019-01-01"), y = 5, label = "Test\nRegion") +
+  annotate("text", x = ymd("2021-03-01"), y = 5, label = "Forecast\nRegion") +
+  geom_point(alpha = 0.25) + 
+  geom_point(aes(x = time, y = .pred), data = future_predictions_tbl, alpha = 0.5, color = "red") +
+  geom_smooth(aes(x = time, y = .pred), data = future_predictions_tbl, method = "loess", formula = y ~ x) + 
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  add_fishape(
+    family = "Carangidae",
+    option = "Caranx_melampygus",
+    xmin = as.Date("2014-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+# scomber ----------------------------------------------------------------------
+train_tbl <- data_sc_imp_ti %>% filter(time < ymd("2018-01-01"))
+test_tbl <- data_sc_imp_ti %>% filter(time > ymd("2018-01-01"))
+
+recipe_spec_timeseries <- recipe(unit_price ~ ., data = train_tbl) %>%
+  step_timeseries_signature(time) 
+
+recipe_spec_final <- recipe_spec_timeseries %>%
+  step_rm(time) %>%
+  step_rm(contains("iso"), 
+          contains("second"), contains("minute"), contains("hour"),
+          contains("am.pm"), contains("xts")) %>%
+  step_normalize(contains("index.num"), time_year) %>%
+  step_interact(~ time_month.lbl * time_day) %>%
+  step_interact(~ time_month.lbl * time_mweek) %>%
+  step_interact(~ time_month.lbl * time_wday.lbl * time_yday) %>%
+  step_dummy(contains("lbl"), one_hot = TRUE) 
+
+forecast_sc <- bake(prep(recipe_spec_final), new_data = train_tbl)
+
+model_spec_glmnet <- linear_reg(mode = "regression", penalty = 0.01) %>%
+  set_engine("glmnet")
+
+workflow_glmnet <- workflow() %>%
+  add_recipe(recipe_spec_final) %>%
+  add_model(model_spec_glmnet)
+
+workflow_trained <- workflow_glmnet %>% fit(data = train_tbl)
+
+prediction_tbl <- workflow_trained %>% 
+  predict(test_tbl) %>%
+  bind_cols(test_tbl)
+
+metrics_sc <- prediction_tbl %>% 
+  metrics(unit_price, .pred) %>% 
+  select(-.estimator) %>% 
+  mutate(.estimate = round(.estimate, 2))
+
+idx <- data_sc_imp_ti %>% tk_index()
+
+idx_future <- idx %>% tk_make_future_timeseries(n_future = 24)
+
+future_tbl <- tibble(time = idx_future) 
+
+future_predictions_tbl <- workflow_glmnet %>% 
+  fit(data = data_sc_imp_ti) %>%
+  predict(future_tbl) %>%
+  bind_cols(future_tbl)
+
+plot_sc_imp_ti <- data_sc_imp_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_rect(
+    xmin = as.numeric(ymd("2018-01-01")),
+    xmax = as.numeric(ymd("2020-03-01")),
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "gray",
+    alpha = 0.01
+  ) +
+  geom_rect(
+    xmin = as.numeric(ymd("2020-03-01")),
+    xmax = +Inf,
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "lightblue",
+    alpha = 0.01
+  ) +
+  annotate("text", x = ymd("2005-01-01"), y = 9, label = "Train\nRegion") +
+  annotate("text", x = ymd("2019-01-01"), y = 9, label = "Test\nRegion") +
+  annotate("text", x = ymd("2021-03-01"), y = 9, label = "Forecast\nRegion") +
+  geom_point(alpha = 0.25) + 
+  geom_point(aes(x = time, y = .pred), data = future_predictions_tbl, alpha = 0.5, color = "red") +
+  geom_smooth(aes(x = time, y = .pred), data = future_predictions_tbl, method = "loess", formula = y ~ x) + 
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  add_fishape(
+    family = "Scombridae",
+    option = "Thunnus_albacares",
+    xmin = as.Date("2000-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+```
+
+In order to process this forecasting model, `r ncol(forecast_hm)-1` time features are extracted and used to predict the evolution of the Horse Mackerel unit price and `r ncol(forecast_sc)-1` time features are extracted and used to predict the evolution of the Scomber unit price.
+
+By selecting a test region corresponding to the last two years (i.e., from 2018 to 2020), it is possible to compare the forecast accuracy with the actual Average unit price values. The most used indicators are $RMSE$ and $MAE$. Root Mean Square Error (RMSE) is the standard deviation of the residuals (prediction errors). Residuals are a measure of how far from the regression line data points are; RMSE is a measure of how spread out these residuals are. In other words, it tells you how concentrated the data is around the line of best fit. Mean Absolute Error (MAE) is a measure of errors between paired observations expressing the same phenomenon.  This is known as a scale-dependent accuracy measure and therefore cannot be used to make comparisons between series using different scales. The closer to 0 is the $RMSE$ and $MAE$ value, the better. In parallel, the $R^2$ indicator also ranges from 0 to 1 but the closer to 1 is the value, the better.
+
+Here, for Horse Mackerel unit price prediction: $RMSE_{hm} =$ `r metrics_hm[[1,2]]` and $MAE_{hm} =$ `r metrics_hm[[3,2]]`. These results reveals that this prediction could be largely be improved. The differences between the months make this prediction model very difficult to establish. The model explains $R^2_{hm} =$ `r scales::percent(metrics_hm[[2,2]])` of the variance of the Horse Mackerel unit price variation.
+
+For the Scomber unit price prediction: $RMSE_{sc} =$ `r metrics_sc[[1,2]]` and $MAE_{sc} =$ `r metrics_sc[[3,2]]`. These results are once again not as good as those for the Horse Mackerel. The trading of Scomber appear to be particularly difficult. The model explains $R^2_{sc} =$ `r scales::percent(metrics_sc[[2,2]])` of the variance of the Scomber unit price variation.
+
+Based on the model previously test, a forecast of the 24 next months is performed. Even if the accuracy of the forecast model on the test table is low, it is still possible to use it to forecast the price within 2 years. 
+
+```{r fig.height=3}
+plot_hm_imp_ti
+```
+
+In the case of the Horse Mackerel unit price prediction, The model reveals a slow decrease until 2024 followed by a rebound.
+
+```{r fig.height=3}
+plot_sc_imp_ti
+```
+
+In the case of the Scomber unit price prediction, The model reveals a as significant increase in first 6 months of 2020 and a continuous decrease until 2022.
+
+\subsection{Prophet Algorithm Forecast}
+
+As the glmnet algorithm, the prophet decomposition extract the temporal trends, seasonality, multiplicative factor and their prediction residuals.
+
+```{r fig.height=3}
+fit <- data_hm_imp_ts %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  )
+
+components_hm <- fabletools::components(fit) %>%
+  autoplot() +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price",
+    labels = scales::dollar_format()
+  ) +
+  labs(title = "Horse Mackerel", subtitle = "") +
+  theme_minimal() +
+  theme(
+    strip.text.y = element_blank(),
+    axis.text.y = element_text(size = 8)
+  )
+
+fit_hm <- fit %>% 
+  forecast(h = "24 months") %>% 
+  autoplot(data_hm_imp_ts) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  add_fishape(
+    family = "Carangidae",
+    option = "Caranx_melampygus",
+    #xmin = as.Date("2014-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    #♣ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+fit <- data_sc_imp_ts %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  )
+
+components_sc <- fabletools::components(fit) %>%
+  autoplot() +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price",
+    labels = scales::dollar_format()
+  ) +
+  labs(title = "Scomber", subtitle = "") +
+  theme_minimal() +
+  theme(
+    strip.text.y = element_text(size = 8, angle = 0),
+    axis.text.y = element_text(size = 8)
+  )
+
+fit_sc <- fit %>% 
+  forecast(h = "24 months") %>% 
+  autoplot(data_sc_imp_ts) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  add_fishape(
+    family = "Scombridae",
+    option = "Thunnus_albacares",
+    xmin = as.Date("2004-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+
+components_hm + components_sc
+```
+
+```{r}
+fit_accuracy_hm <- data_hm_imp_ts %>% 
+  filter(time < ymd("2018-01-01")) %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  ) %>% 
+  forecast(h = "24 months") %>% 
+  accuracy(data_hm_imp_ts) %>% 
+  mutate_if(is.numeric, round,2)
+
+fit_accuracy_sc <- data_sc_imp_ts %>% 
+  filter(time < ymd("2018-01-01")) %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  ) %>% 
+  forecast(h = "24 months") %>% 
+  accuracy(data_sc_imp_ts) %>% 
+  mutate_if(is.numeric, round,2)
+```
+
+In term of algorithm validation $RMSE$ and $MAE$ can be calculated from the original data. For Horse Mackerel prediction, $RMSE_{hm} =$ `r fit_accuracy_hm[[4]]` and $MAE_{hm} =$ `r fit_accuracy_hm[[5]]`, which is not as good as the glmnet algorithm. For Scomber prediction, $RMSE_{sc} =$ `r fit_accuracy_sc[[4]]` and $MAE_{sc} =$ `r fit_accuracy_sc[[5]]` which is again higher than those from the glmnet algorithm.
+
+The result of the forecast by Prophet uses the seasonality of the price evolution (see Additional Analyses section) as well as the overall trend.
+
+```{r fig.height=3}
+fit_hm
+```
+
+For Horse Mackerel, the prediction reveals a high seasonal effect with a stationary trend. 
+
+```{r fig.height=3}
+fit_sc
+```
+
+For Scomber, the prediction reveals a high seasonality effect as well but the trend shows a significant increase according the time. 
+
+\subsection{Additional Analyses}
+
+A linear regression was performed between the average unit price and the number of transaction with a trade partner for Horse Mackerel and Scomber in order to highlight possible factors to be taken into account.
+
+```{r fig.height=3}
+data_hm_imp_lm <- lm(m_price ~ n_price, data_hm_imp_summary) %>% 
+  papaja::apa_print()
+
+plot_hm_imp_summary <- data_hm_imp_summary %>% 
+  ggplot(aes(n_price, m_price)) + 
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  scale_x_continuous("Number of transaction with the trade partner") +
+  scale_y_continuous("Average unit price", labels = scales::dollar_format()) +
+  ggtitle("Horse Mackerel") +
+  theme_minimal()
+
+data_sc_imp_lm <- lm(m_price ~ n_price, data_sc_imp_summary) %>% 
+  papaja::apa_print()
+
+plot_sc_imp_summary <- data_sc_imp_summary %>% 
+  ggplot(aes(n_price, m_price)) + 
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  scale_x_continuous("Number of transaction with the trade partner") +
+  scale_y_continuous("Average unit price", labels = scales::dollar_format()) +
+  ggtitle("Scomber") + 
+  theme_minimal()
+
+plot_hm_imp_summary + plot_sc_imp_summary
+```
+
+However the results show that the number of trade has no significant relationship with the average unit price of Horse Mackerel trade (`r data_hm_imp_lm$full_result$modelfit$r2`) and Scomber trade (`r data_sc_imp_lm$full_result$modelfit$r2`).
+
+Another possible bias involved in trade relationship is the possible relationship between quantity and unit price. 
+
+```{r fig.height=3}
+data_hm_imp_lm <- lm(unit_price ~ log10(primary_quantity), data_hm_imp_raw) %>% 
+  papaja::apa_print()
+
+plot_hm_imp_raw <- data_hm_imp_raw %>% 
+  ggplot(aes(primary_quantity, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  #stat_regline_equation() +
+  scale_x_log10("Unit quantity (log)", labels = scales::comma) +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Horse Mackerel") +
+  theme_minimal()
+
+data_sc_imp_lm <- lm(unit_price ~ log10(primary_quantity), data_sc_imp_raw) %>% 
+  papaja::apa_print()
+
+plot_sc_imp_raw <- data_sc_imp_raw %>% 
+  ggplot(aes(primary_quantity, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  #stat_regline_equation() +
+  scale_x_log10("Unit quantity (log)", labels = scales::comma) +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format()
+  ) +
+  ggtitle("Scomber") +
+  theme_minimal()
+
+plot_hm_imp_raw + plot_sc_imp_raw
+```
+
+Interestingly, the results reveals a non significant relationship between the unit price and the the quantity traded for Horse Mackerel (`r data_hm_imp_lm$full_result$modelfit$r2`) but as strong and significant relationship between the unit price and the the quantity traded for Scomber (`r data_sc_imp_lm$full_result$modelfit$r2`). This last results reveals the important differences in the trade of this two different fishes.
+
+\clearpage
+
+\section{Conclusion}
+
+In the previous sections of this document have been presented the analysis and forecast of Horse Mackerel and Scomber unit price in export and import trades by Norway. The analysis of this evolutions reveals similarities between the fishes and between the types of trade (i.e. export vs. import). The analysis also revealed the differences between the trade partners in term of trade history and their negotiated unit price (specific averages and volatility indexes). For the purpose of this forecast analysis an average unit price per month was calculated in order to remove the influence of trade history between the different partners.
+
+In order to forecast the evolution of Horse Mackerel and Scomber unit price in export and import trades by Norway, two specific algorithm were applied: Glmnet and Prophet. These algorithms were using time features and properties of the time series to perform this forecasting according the time. Through some visualisations, the forecast of the unit price over 24 months was revealed.
+
+In addition to the forecast, validity indicators were calculated. As this report is a presentation of preliminary results of this forecasting work, these indicators revealed the necessity to improve the validity of this forecast. However, this results is not surprising as the building of forecasting models to predict high volatility financial time-series requires years to build as well as infrastructures and findings. 
+
+Beside the necessity for more time in the exploration of suitable algorithms and factors to take into account, this analysis could be improved by increasing the quality of the data used (time span, time resolution, trading partner network, type of fishes) and by increasing the processing power in the analysis (increase of features and variable to take into account).
+
+Despite these limitations, this report has highlight the possibility to built forecasting models a minima and built established a framework for future improvements.

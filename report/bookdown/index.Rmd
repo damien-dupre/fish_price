@@ -1,0 +1,23 @@
+---
+title: "Fish Price Forecasting"
+author: "Damien Dupré"
+site: bookdown::bookdown_site
+documentclass: book
+output:
+  bookdown::gitbook: default
+  #bookdown::pdf_book: default
+---
+
+# Prerequisites {-}
+
+This report investigate the evolution of fish unit price and implement algorithm to forecast this evolution.
+
+Each chapter is dedicated to a specific fish trade analysis which involves a type of fish, a country and its type of trade (import or export). 
+
+Whithin these chapters, a first section is dedicated to the analysis of the trade history using classic methods and visualisations. A second section is dedicated to the implementation of forecast algorithms. Currently, 2 different forecast algorithm models are implemented: Glmnet and Prophet.
+
+- Glmnet is a generalized linear model via penalized maximum likelihood trained for forecast purpose. The regularization path is computed for the lasso or elasticnet penalty at a grid of values for the regularization parameter lambda. The algorithm is extremely fast, and can exploit sparsity in the input matrix $x$.
+
+- Prophet is a procedure for forecasting time series data based on an additive model where non-linear trends are fit with yearly, weekly, and daily seasonality, plus holiday effects. It works best with time series that have strong seasonal effects and several seasons of historical data. Prophet is robust to missing data and shifts in the trend, and typically handles outliers well.
+
+Finally additional analyses are presented in order to focus on specific points of the analysis such as factors influencing the Unit Price evolution, Seasonality and Trade evolution of specific partners.

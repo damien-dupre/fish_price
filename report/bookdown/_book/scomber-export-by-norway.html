@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>3 Scomber export by Norway | Fish Price Forecasting</title>
+  <meta name="description" content="3 Scomber export by Norway | Fish Price Forecasting" />
+  <meta name="generator" content="bookdown 0.17 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="3 Scomber export by Norway | Fish Price Forecasting" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="3 Scomber export by Norway | Fish Price Forecasting" />
+  
+  
+  
+
+<meta name="author" content="Damien Dupré" />
+
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="horse-mackerel-imports-by-norway.html"/>
+<link rel="next" href="scomber-imports-by-norway.html"/>
+<script src="libs/jquery-2.2.3/jquery.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>Prerequisites</a></li>
+<li class="chapter" data-level="1" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html"><i class="fa fa-check"></i><b>1</b> Horse mackerel exports from Norway</a><ul>
+<li class="chapter" data-level="1.1" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#analysis"><i class="fa fa-check"></i><b>1.1</b> Analysis</a></li>
+<li class="chapter" data-level="1.2" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#glmnet-algorithm-forecast"><i class="fa fa-check"></i><b>1.2</b> Glmnet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="1.2.1" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#forecast-validation"><i class="fa fa-check"></i><b>1.2.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="1.2.2" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#forecast-prediction"><i class="fa fa-check"></i><b>1.2.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="1.3" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#prophet-algorithm-forecast"><i class="fa fa-check"></i><b>1.3</b> Prophet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="1.3.1" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#forecast-validation-1"><i class="fa fa-check"></i><b>1.3.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="1.3.2" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#forecast-prediction-1"><i class="fa fa-check"></i><b>1.3.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="1.4" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#additional-analyses"><i class="fa fa-check"></i><b>1.4</b> Additional Analyses</a><ul>
+<li class="chapter" data-level="1.4.1" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#factors-influencing-unit-price"><i class="fa fa-check"></i><b>1.4.1</b> Factors influencing Unit price</a></li>
+<li class="chapter" data-level="1.4.2" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#trend-in-long-lasting-trade-partners"><i class="fa fa-check"></i><b>1.4.2</b> Trend in long lasting trade partners</a></li>
+<li class="chapter" data-level="1.4.3" data-path="horse-mackerel-exports-from-norway.html"><a href="horse-mackerel-exports-from-norway.html#unit-price-seasonality-changes"><i class="fa fa-check"></i><b>1.4.3</b> Unit price seasonality changes</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html"><i class="fa fa-check"></i><b>2</b> Horse mackerel imports by Norway</a><ul>
+<li class="chapter" data-level="2.1" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#analysis-1"><i class="fa fa-check"></i><b>2.1</b> Analysis</a></li>
+<li class="chapter" data-level="2.2" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#glmnet-algorithm-forecast-1"><i class="fa fa-check"></i><b>2.2</b> Glmnet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="2.2.1" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#forecast-validation-2"><i class="fa fa-check"></i><b>2.2.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="2.2.2" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#forecast-prediction-2"><i class="fa fa-check"></i><b>2.2.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="2.3" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#prophet-algorithm-forecast-1"><i class="fa fa-check"></i><b>2.3</b> Prophet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="2.3.1" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#forecast-validation-3"><i class="fa fa-check"></i><b>2.3.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="2.3.2" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#forecast-prediction-3"><i class="fa fa-check"></i><b>2.3.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="2.4" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#additional-analyses-1"><i class="fa fa-check"></i><b>2.4</b> Additional Analyses</a><ul>
+<li class="chapter" data-level="2.4.1" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#factors-influencing-unit-price-1"><i class="fa fa-check"></i><b>2.4.1</b> Factors influencing Unit price</a></li>
+<li class="chapter" data-level="2.4.2" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#trend-in-long-lasting-trade-partners-1"><i class="fa fa-check"></i><b>2.4.2</b> Trend in long lasting trade partners</a></li>
+<li class="chapter" data-level="2.4.3" data-path="horse-mackerel-imports-by-norway.html"><a href="horse-mackerel-imports-by-norway.html#unit-price-seasonality-changes-1"><i class="fa fa-check"></i><b>2.4.3</b> Unit price seasonality changes</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html"><i class="fa fa-check"></i><b>3</b> Scomber export by Norway</a><ul>
+<li class="chapter" data-level="3.1" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#analysis-2"><i class="fa fa-check"></i><b>3.1</b> Analysis</a></li>
+<li class="chapter" data-level="3.2" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#glmnet-algorithm-forecast-2"><i class="fa fa-check"></i><b>3.2</b> Glmnet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="3.2.1" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#forecast-validation-4"><i class="fa fa-check"></i><b>3.2.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="3.2.2" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#forecast-prediction-4"><i class="fa fa-check"></i><b>3.2.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="3.3" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#prophet-algorithm-forecast-2"><i class="fa fa-check"></i><b>3.3</b> Prophet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="3.3.1" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#forecast-validation-5"><i class="fa fa-check"></i><b>3.3.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="3.3.2" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#forecast-prediction-5"><i class="fa fa-check"></i><b>3.3.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="3.4" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#additional-analyses-2"><i class="fa fa-check"></i><b>3.4</b> Additional Analyses</a><ul>
+<li class="chapter" data-level="3.4.1" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#factors-influencing-unit-price-2"><i class="fa fa-check"></i><b>3.4.1</b> Factors influencing Unit price</a></li>
+<li class="chapter" data-level="3.4.2" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#trend-in-long-lasting-trade-partners-2"><i class="fa fa-check"></i><b>3.4.2</b> Trend in long lasting trade partners</a></li>
+<li class="chapter" data-level="3.4.3" data-path="scomber-export-by-norway.html"><a href="scomber-export-by-norway.html#unit-price-seasonality-changes-2"><i class="fa fa-check"></i><b>3.4.3</b> Unit price seasonality changes</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html"><i class="fa fa-check"></i><b>4</b> Scomber imports by Norway</a><ul>
+<li class="chapter" data-level="4.1" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#analysis-3"><i class="fa fa-check"></i><b>4.1</b> Analysis</a></li>
+<li class="chapter" data-level="4.2" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#glmnet-algorithm-forecast-3"><i class="fa fa-check"></i><b>4.2</b> Glmnet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="4.2.1" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#forecast-validation-6"><i class="fa fa-check"></i><b>4.2.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="4.2.2" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#forecast-prediction-6"><i class="fa fa-check"></i><b>4.2.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="4.3" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#prophet-algorithm-forecast-3"><i class="fa fa-check"></i><b>4.3</b> Prophet Algorithm Forecast</a><ul>
+<li class="chapter" data-level="4.3.1" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#forecast-validation-7"><i class="fa fa-check"></i><b>4.3.1</b> Forecast Validation</a></li>
+<li class="chapter" data-level="4.3.2" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#forecast-prediction-7"><i class="fa fa-check"></i><b>4.3.2</b> Forecast Prediction</a></li>
+</ul></li>
+<li class="chapter" data-level="4.4" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#additional-analyses-3"><i class="fa fa-check"></i><b>4.4</b> Additional Analyses</a><ul>
+<li class="chapter" data-level="4.4.1" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#factors-influencing-unit-price-3"><i class="fa fa-check"></i><b>4.4.1</b> Factors influencing Unit price</a></li>
+<li class="chapter" data-level="4.4.2" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#trend-in-long-lasting-trade-partners-3"><i class="fa fa-check"></i><b>4.4.2</b> Trend in long lasting trade partners</a></li>
+<li class="chapter" data-level="4.4.3" data-path="scomber-imports-by-norway.html"><a href="scomber-imports-by-norway.html#unit-price-seasonality-changes-3"><i class="fa fa-check"></i><b>4.4.3</b> Unit price seasonality changes</a></li>
+</ul></li>
+</ul></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Fish Price Forecasting</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="scomber-export-by-norway" class="section level1">
+<h1><span class="header-section-number">3</span> Scomber export by Norway</h1>
+<div id="analysis-2" class="section level2">
+<h2><span class="header-section-number">3.1</span> Analysis</h2>
+<p>Between 1998 and 2019, Norway has exported horse mackerel to 108 countries worldwilde. However the data collected shows a important discrepency between these countries regarding the trade history, the level of the price applied and its volatility.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-1-1.png" width="672" /></p>
+<p>In the Figure here above, it is possible to distinguish countries with a high average price and high volatility such as Lithuania, high average price and low volatility such as France, low average price and high volatitilty such as Denmark and low average price with low volatility such as Egypt.</p>
+<p>A second factor is particularly important to take into account, the level of trade can vary between the countries. Some countries have only one or two trade while others have more than 60 trades.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>For the forcast models done in the next sections, this bias will not be removed as all the data will be taken into account. The available data are too low in term of sampling frequency (once a month maximun), on a too short period, with not enough data per country. Therefore an analysis country wise is impossible. All the data will be taken into account in the coming sections.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+<p>The trend of the evolution of fish price since 1998 indicates follows a slight parabolic inverse trend with a valley (negative peak) in 2016.</p>
+</div>
+<div id="glmnet-algorithm-forecast-2" class="section level2">
+<h2><span class="header-section-number">3.2</span> Glmnet Algorithm Forecast</h2>
+<p>In order to forcast the evolution of fish price according the time, the existing data are splitted in two sections: the train region which will be used to build the forecast model and the test region which will be used compare the data predicted with the actual data.</p>
+<p>In order to process this forcasting model, 224 time features are extracted and used to predict the evolution of the unit price.</p>
+<div id="forecast-validation-4" class="section level3">
+<h3><span class="header-section-number">3.2.1</span> Forecast Validation</h3>
+<p>By selecting a train region from 2012 to 2018 and a test region from 2018 to 2020, it is possible to compare the forecast accuracy with the actual Average unit price values.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+<p>The most used indicators are RMSE and MAE. The closer to 0 is their value, the better. Here RMSE = 0.64 and MAE = 0.6. These results are encouraging but could be largely be improved. In paralel, the <span class="math inline">\(R^2\)</span> indicator also ranges from 0 to 1 but the closer to 1 is the value, the better. Here, the model explains 2% of the variance of the unit price variation.</p>
+</div>
+<div id="forecast-prediction-4" class="section level3">
+<h3><span class="header-section-number">3.2.2</span> Forecast Prediction</h3>
+<p>Based on the model previously test, a forecast of the 24 next months is performed.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<p>Even if the accuracy of the forecast model on the test table is low, it is still possible to use it to forcast the price whithin 5 years. The model reveals a sharp decrease in 2020 until 2024 and a rebound from 2024.</p>
+</div>
+</div>
+<div id="prophet-algorithm-forecast-2" class="section level2">
+<h2><span class="header-section-number">3.3</span> Prophet Algorithm Forecast</h2>
+<p>As the glmnet algorythm, the prophet decomposition extract the temporal trends, seasonality, multiplicative factor and their prediction residuals.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-11-1.png" width="672" /></p>
+<div id="forecast-validation-5" class="section level3">
+<h3><span class="header-section-number">3.3.1</span> Forecast Validation</h3>
+<p>Here RMSE = 0.39 and MAE = 0.32, which is better than the glmnet algorithm but this value is only the train region.</p>
+</div>
+<div id="forecast-prediction-5" class="section level3">
+<h3><span class="header-section-number">3.3.2</span> Forecast Prediction</h3>
+<p>The result of the forecast by Prophet uses the seasonlity of the price evolution (see Additional Analyses section) as well as the overall trend.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-13-1.png" width="672" /></p>
+<p>The prediction reveals a decrease of the fish price until 2022 with seasonal changes.</p>
+</div>
+</div>
+<div id="additional-analyses-2" class="section level2">
+<h2><span class="header-section-number">3.4</span> Additional Analyses</h2>
+<div id="factors-influencing-unit-price-2" class="section level3">
+<h3><span class="header-section-number">3.4.1</span> Factors influencing Unit price</h3>
+<p>The difference between countries that are historic and recurent trade partner with countries who have only several past trade is highly relevant. Indeed we can imagine that price establisment is build on a commercial relationship between the countries, if a country has no history, the average price paid is likely to be higher than historical trade partners which will bisais the forcast of the evolution.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<p>However the results show that the number of trade has no significant relationship with the average unit price (<span class="math inline">\(R^2 = &lt; .01\)</span>, <span class="math inline">\(F(1, 106) = 0.44\)</span>, <span class="math inline">\(p = .509\)</span>).</p>
+<p>Another possible bais involved in trade relationship is the possible relationship between quantity and unit price.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<p>It seems logical to believe that countries buying more will have more leverage to negociate their unit price. The results reveals a weak but significant relationship between the unit quantity ordered on a log scale and unit price (<span class="math inline">\(R^2 = .07\)</span>, <span class="math inline">\(F(1, 9268) = 734.25\)</span>, <span class="math inline">\(p &lt; .001\)</span>).</p>
+<p>A future investigation would be to try to understand the factors explaining why certain countries have a high average price and others a low average price (beside the the number of trade).</p>
+</div>
+<div id="trend-in-long-lasting-trade-partners-2" class="section level3">
+<h3><span class="header-section-number">3.4.2</span> Trend in long lasting trade partners</h3>
+<p>Countries with a short trade history can be perceived as being outliers, so just to check, countries with less than 10 trades have been removed from the following analysis.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-16-1.png" width="672" /></p>
+<p>Result without countries with less than 10 trade data point reveal the exact same pattern as previsouly identified. Because analysing all the countries together is essential given the low amount of data to forecast and the trend appears to be similar for these countries, all the data will be kept for the remaining analyses.</p>
+</div>
+<div id="unit-price-seasonality-changes-2" class="section level3">
+<h3><span class="header-section-number">3.4.3</span> Unit price seasonality changes</h3>
+<p>The analysis of the seasonal change within a year indicates a specific recuring pattern with a peack in April and a decease until December.</p>
+<p><img src="_main_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
+<p>It is also interesting to observe that prices increase with the years.</p>
+
+</div>
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="horse-mackerel-imports-by-norway.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="scomber-imports-by-norway.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/lunr.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

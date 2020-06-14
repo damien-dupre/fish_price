@@ -1,0 +1,551 @@
+# Scomber imports by Norway
+
+```{r setup, include=FALSE}
+# packages ---------------------------------------------------------------------
+library(tidyverse)
+library(rnaturalearth)
+library(sf)
+library(ggpubr)
+library(papaja)
+library(tsibble)
+library(lubridate)
+library(ggExtra)
+library(fishualize)
+library(lubridate)
+library(workflows)
+library(parsnip)
+library(recipes)
+library(yardstick)
+library(glmnet)
+library(tidyquant)
+library(timetk) # Use >= 0.1.3, remotes::install_github("business-science/timetk")
+library(fable)
+library(fabletools)
+library(prophet)
+library(fable.prophet) #remotes::install_github("mitchelloharawild/fable.prophet")
+# options ----------------------------------------------------------------------
+knitr::opts_chunk$set(
+  echo = FALSE,
+  error = FALSE,
+  warning = FALSE,
+  message = FALSE
+  )
+options(scipen = 999)
+# functions --------------------------------------------------------------------
+"scripts/functions.R" %>% here::here() %>% source()
+# data -------------------------------------------------------------------------
+data_raw <- "data/norway_scomber_imports_raw.csv" %>% read_clean()
+
+data_ts <- data_raw %>% 
+  group_by(year, month) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  ungroup() %>%
+  mutate(time = make_date(year) + months(month)) %>%
+  select(-year, -month) %>% 
+  as_tsibble(index = time)
+
+data_ti <- data_ts %>% 
+  as_tibble()
+```
+
+## Analysis
+
+Between `r min(data_raw$year)` and `r max(data_raw$year)`, Norway has exported horse mackerel to `r length(unique(data_raw$trade_partner))` countries worldwilde. However the data collected shows a important discrepency between these countries regarding the trade history, the level of the price applied and its volatility.
+
+```{r}
+data_summary <- data_raw %>% 
+  dplyr::group_by(trade_partner) %>% 
+  dplyr::summarise(
+    n_price = n(),
+    m_price = mean(unit_price),
+    sd_price = sd(unit_price)
+  ) %>% 
+  replace(is.na(.), 0)
+
+data_summary %>%
+  mutate(
+    trade_partner = fct_reorder(trade_partner, m_price),
+    m_price = m_price * 20,
+    sd_price = sd_price * 20
+  ) %>%
+  ggplot() +
+  geom_col(aes(trade_partner, n_price), alpha = 0.3) +
+  geom_point(aes(trade_partner, m_price)) +
+  geom_errorbar(aes(trade_partner, ymin = m_price - sd_price, ymax = m_price + sd_price)) +
+  scale_x_discrete("Norway import trade partner") +
+  scale_y_continuous(
+    "Number of transaction between 2012 and 2020 (bar)",
+    sec.axis = sec_axis(~./20, name = "Average price per Unit (pointrange)", labels = scales::dollar_format(suffix = "", prefix = "€"))
+  ) +
+  coord_flip() +
+  theme_minimal()
+```
+
+In the Figure here above, it is possible to distinguish countries with a high  average price and high volatility such as Lithuania, high average price and low volatility such as France, low average price and high volatitilty such as Denmark and low average price with low volatility such as Egypt. 
+
+A second factor is particularly important to take into account, the level of trade can vary between the countries. Some countries have only one or two trade while others have more than 60 trades.
+
+```{r}
+world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
+
+data_world <- world %>% 
+  dplyr::right_join(data_summary, by = c("name" = "trade_partner")) %>% 
+  dplyr::mutate(centroid = sf::st_centroid(geometry))
+
+ggplot() +
+  geom_sf(data = world) +
+  geom_sf(data = data_world, aes(fill = n_price)) +
+  #geom_sf(data = data_world, aes(geometry = centroid, size = m_price)) +
+  stat_sf_coordinates(data = data_world, aes(color = sd_price), geom = "point") +
+  scale_x_continuous("") +
+  scale_y_continuous("") +
+  scale_fill_gradient("Amount of Transactions", low = "lightcoral", high = "darkred") +
+  scale_color_continuous("Transaction Volatility (SD)") +
+  guides(
+    fill = guide_colorbar(title.position = "top"),
+    color = guide_colorbar(title.position = "top")
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    legend.box = "horizontal",
+    legend.direction = "horizontal"
+  )
+```
+
+For the forcast models done in the next sections, this bias will not be removed as all the data will be taken into account. The available data are too low in term of sampling frequency (once a month maximun), on a too short period, with not enough data per country. Therefore an analysis country wise is impossible. All the data will be taken into account in the coming sections.
+
+```{r}
+data_raw %>%
+  group_by(year, month, trade_partner) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  mutate(time = make_date(year) + months(month)) %>%
+  as_tsibble(index = time, key = c(trade_partner)) %>% 
+  ggplot(aes(time, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "loess", span = 1) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  add_fishape(
+    family = "Scombridae",
+    option = "Thunnus_albacares",
+    xmin = as.Date("2014-01-01"), 
+    #xmax = as.Date("2018-01-01"), 
+    ymin = 2, 
+    # ymax = 4,
+    fill = "black",
+    alpha = 0.25
+  ) +
+  theme_minimal()
+```
+
+The trend of the evolution of fish price since `r min(data_raw$year)` indicates follows a slight parabolic inverse trend with a valley (negative peak) in 2016.
+
+## Glmnet Algorithm Forecast
+
+In order to forcast the evolution of fish price according the time, the existing data are splitted in two sections: the train region which will be used to build the forecast model and the test region which will be used compare the data predicted with the actual data.
+
+```{r eval = FALSE}
+data_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_rect(
+    xmin = as.numeric(ymd("2018-01-01")),
+    xmax = +Inf,
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "gray",
+    alpha = 0.01
+  ) +
+  annotate("text", x = ymd("2014-01-01"), y = 5, label = "Train Region") +
+  annotate("text", x = ymd("2019-01-01"), y = 5,label = "Test Region") +
+  geom_point(alpha = 0.25) + 
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+```{r}
+train_tbl <- data_ti %>% filter(time < ymd("2018-01-01"))
+test_tbl <- data_ti %>% filter(time > ymd("2018-01-01"))
+
+recipe_spec_timeseries <- recipe(unit_price ~ ., data = train_tbl) %>%
+  step_timeseries_signature(time) 
+
+#bake(prep(recipe_spec_timeseries), new_data = train_tbl)
+
+recipe_spec_final <- recipe_spec_timeseries %>%
+  step_rm(time) %>%
+  step_rm(contains("iso"), 
+          contains("second"), contains("minute"), contains("hour"),
+          contains("am.pm"), contains("xts")) %>%
+  step_normalize(contains("index.num"), time_year) %>%
+  step_interact(~ time_month.lbl * time_day) %>%
+  step_interact(~ time_month.lbl * time_mweek) %>%
+  step_interact(~ time_month.lbl * time_wday.lbl * time_yday) %>%
+  step_dummy(contains("lbl"), one_hot = TRUE) 
+
+forecast_df <- bake(prep(recipe_spec_final), new_data = train_tbl)
+
+# Model Specification
+
+model_spec_glmnet <- linear_reg(mode = "regression", penalty = 0.01) %>%
+  set_engine("glmnet")
+
+# model_spec_glmnet <- linear_reg(mode = "regression") %>%
+#   set_engine("glmnet")
+
+# Workflow
+
+workflow_glmnet <- workflow() %>%
+  add_recipe(recipe_spec_final) %>%
+  add_model(model_spec_glmnet)
+#workflow_glmnet
+
+# Training
+
+workflow_trained <- workflow_glmnet %>% fit(data = train_tbl)
+```
+
+In order to process this forcasting model, `r ncol(forecast_df)-1` time features are extracted and used to predict the evolution of the unit price.
+
+### Forecast Validation 
+
+By selecting a train region from 2012 to 2018 and a test region from 2018 to 2020, it is possible to compare the forecast accuracy with the actual Average unit price values.
+
+```{r echo=FALSE}
+prediction_tbl <- workflow_trained %>% 
+  predict(test_tbl) %>%
+  bind_cols(test_tbl)
+
+data_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_rect(
+    xmin = as.numeric(ymd("2018-01-01")),
+    xmax = +Inf,
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "gray",
+    alpha = 0.01
+  ) +
+  annotate("text", x = ymd("2014-01-01"), y = 2.5, label = "Train Region") +
+  annotate("text", x = ymd("2019-01-01"), y = 2.5,label = "Test Region") +
+  geom_point(alpha = 0.25) + 
+  geom_point(aes(x = time, y = .pred), data = prediction_tbl, alpha = 0.5, color = "red") +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+```{r}
+metrics_pred <- prediction_tbl %>% 
+  metrics(unit_price, .pred) %>% 
+  select(-.estimator) %>% 
+  mutate(.estimate = round(.estimate, 2))
+# knitr::kable(metrics_pred, digits = 2)
+```
+
+The most used indicators are RMSE and MAE. The closer to 0 is their value, the better. Here RMSE = `r metrics_pred[[1,2]]` and MAE = `r metrics_pred[[3,2]]`. These results are encouraging but could be largely be improved. In paralel, the $R^2$ indicator also ranges from 0 to 1 but the closer to 1 is the value, the better. Here, the model explains `r scales::percent(metrics_pred[[2,2]])` of the variance of the unit price variation.
+
+```{r eval=FALSE}
+prediction_tbl %>%
+  ggplot(aes(x = time, y = unit_price - .pred)) +
+  geom_hline(yintercept = 0, color = "black") +
+  geom_point(color = "gray") +
+  geom_smooth(method = "loess", formula = y ~ x, span = 0.5, color = "red") +
+  geom_smooth(method = "loess", formula = y ~ x, span = 1.00, se = FALSE) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price prediction residuals", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+### Forecast Prediction
+
+Based on the model previously test, a forecast of the 24 next months is performed.
+
+```{r}
+# Extract index
+idx <- data_ti %>% tk_index()
+
+# Get time series summary from index
+# df_summary <- idx %>% tk_get_timeseries_summary()
+# df_summary[1:6]
+# df_summary[7:12]
+
+idx_future <- idx %>% tk_make_future_timeseries(n_future = 24)
+
+future_tbl <- tibble(time = idx_future) 
+
+future_predictions_tbl <- workflow_glmnet %>% 
+  fit(data = data_ti) %>%
+  predict(future_tbl) %>%
+  bind_cols(future_tbl)
+
+data_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_rect(
+    xmin = as.numeric(ymd("2018-01-01")),
+    xmax = as.numeric(ymd("2020-03-01")),
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "gray",
+    alpha = 0.01
+  ) +
+  geom_rect(
+    xmin = as.numeric(ymd("2020-03-01")),
+    xmax = +Inf,
+    ymin = -Inf, 
+    ymax = +Inf,
+    fill = "lightblue",
+    alpha = 0.01
+  ) +
+  annotate("text", x = ymd("2014-01-01"), y = 5, label = "Train Region") +
+  annotate("text", x = ymd("2019-01-01"), y = 5, label = "Test Region") +
+  annotate("text", x = ymd("2021-03-01"), y = 5, label = "Forecast Region") +
+  geom_point(alpha = 0.25) + 
+  #geom_point(aes(x = time, y = .pred), data = prediction_tbl, alpha = 0.5, color = "red") +
+  geom_point(aes(x = time, y = .pred), data = future_predictions_tbl, alpha = 0.5, color = "red") +
+  geom_smooth(aes(x = time, y = .pred), data = future_predictions_tbl, method = "loess", formula = y ~ x) + 
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+Even if the accuracy of the forecast model on the test table is low, it is still possible to use it to forcast the price whithin 5 years. The model reveals a sharp decrease in 2020 until 2024 and a rebound from 2024.
+
+```{r eval=FALSE}
+# Calculate standard deviation of residuals
+test_resid_sd <- prediction_tbl %>%
+  summarize(stdev = sd(unit_price - .pred))
+
+future_predictions_tbl <- future_predictions_tbl %>%
+  mutate(
+    lo.95 = .pred - 1.96 * test_resid_sd$stdev,
+    lo.80 = .pred - 1.28 * test_resid_sd$stdev,
+    hi.80 = .pred + 1.28 * test_resid_sd$stdev,
+    hi.95 = .pred + 1.96 * test_resid_sd$stdev
+  )
+
+data_ti %>%
+  ggplot(aes(x = time, y = unit_price)) +
+  geom_point(alpha = 0.5, color = "gray") +
+  geom_ribbon(
+    aes(y = .pred, ymin = lo.95, ymax = hi.95), 
+    data = future_predictions_tbl, 
+    fill = "lightblue"
+  ) +
+  geom_ribbon(
+    aes(y = .pred, ymin = lo.80, ymax = hi.80, fill = key), 
+    data = future_predictions_tbl,
+    fill = "blue", color = NA, size = 0, alpha = 0.5) +
+  geom_point(aes(x = time, y = .pred), data = future_predictions_tbl) +
+  geom_smooth(
+    aes(x = time, y = .pred), 
+    data = future_predictions_tbl,
+    formula = y ~ x,
+    method = 'loess', 
+    color = "white", 
+    se = FALSE
+  ) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+## Prophet Algorithm Forecast
+
+As the glmnet algorythm, the prophet decomposition extract the temporal trends, seasonality, multiplicative factor and their prediction residuals.
+
+```{r}
+fit <- data_ts %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  )
+# fit
+# components(fit)
+
+fabletools::components(fit) %>%
+  autoplot() +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price",
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+### Forecast Validation
+
+```{r}
+fit_accuracy <- data_ts %>% 
+  filter(time < ymd("2018-01-01")) %>% 
+  model(
+    prophet = fable.prophet::prophet(unit_price ~ season("year", 4, type = "multiplicative"))
+  ) %>% 
+  forecast(h = "24 months") %>% 
+  accuracy(data_ts) %>% 
+  mutate_if(is.numeric, round,2)
+```
+
+Here RMSE = `r fit_accuracy[[4]]` and MAE = `r fit_accuracy[[5]]`, which is better than the glmnet algorithm but this value is only the train region.
+
+### Forecast Prediction
+
+The result of the forecast by Prophet uses the seasonlity of the price evolution (see Additional Analyses section) as well as the overall trend.
+
+```{r}
+fit %>% 
+  forecast(h = "24 months") %>% 
+  autoplot(data_ts) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+The prediction reveals a decrease of the fish price until 2022 with seasonal changes. 
+
+## Additional Analyses
+
+### Factors influencing Unit price
+
+The difference between countries that are historic and recurent trade partner with countries who have only several past trade is highly relevant. Indeed we can imagine that price establisment is build on a commercial relationship between the countries, if a country has no history, the average price paid is likely to be higher than historical trade partners which will bisais the forcast of the evolution.
+
+```{r}
+data_lm <- lm(m_price ~ n_price, data_summary) %>% 
+  papaja::apa_print()
+
+data_summary %>% 
+  ggplot(aes(n_price, m_price)) + 
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  scale_x_continuous("Number of transaction with the trade partner") +
+  scale_y_continuous("Average unit price", labels = scales::dollar_format(suffix = "", prefix = "€")) +
+  theme_minimal()
+```
+
+However the results show that the number of trade has no significant relationship with the average unit price (`r data_lm$full_result$modelfit$r2`).
+
+Another possible bais involved in trade relationship is the possible relationship between quantity and unit price. 
+
+```{r}
+data_lm <- lm(unit_price ~ log10(primary_quantity), data_raw) %>% 
+  papaja::apa_print()
+
+data_raw %>% 
+  ggplot(aes(primary_quantity, unit_price)) +
+  geom_point(alpha = 0.25) +
+  geom_smooth(formula = y ~ x, method = "lm") +
+  stat_cor(aes(label = paste(..rr.label..))) +
+  #stat_regline_equation() +
+  scale_x_log10("Unit quantity (log)", labels = scales::comma) +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  theme_minimal()
+```
+
+It seems logical to believe that countries buying more will have more leverage to negociate their unit price. The results reveals a weak but significant relationship between the unit quantity ordered on a log scale and unit price (`r data_lm$full_result$modelfit$r2`).
+
+A future investigation would be to try to understand the factors explaining why certain countries have a high average price and others a low average price (beside the the number of trade).
+
+### Trend in long lasting trade partners
+
+Countries with a short trade history can be perceived as being outliers, so just to check, countries with less than 10 trades have been removed from the following analysis.
+
+```{r}
+list_country_keep <- data_summary %>% 
+  filter(n_price > 10) %>% 
+  magrittr::use_series(trade_partner)
+
+data_raw %>%
+  group_by(year, month, trade_partner) %>% 
+  summarise(unit_price = mean(unit_price)) %>% 
+  mutate(time = make_date(year) + months(month)) %>%
+  as_tsibble(index = time, key = c(trade_partner)) %>% 
+  filter(trade_partner %in% list_country_keep) %>% 
+  ggplot(aes(time, unit_price)) +
+  geom_point(aes(color = trade_partner)) +
+  geom_line(aes(color = trade_partner)) +
+  geom_smooth(formula = y ~ x, method = "loess", span = 1) +
+  scale_x_date("") +
+  scale_y_continuous(
+    "Unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")
+  ) +
+  scale_color_discrete(
+    "Trade partner"
+  ) +
+  theme_minimal()
+```
+
+Result without countries with less than 10 trade data point reveal the exact same pattern as previsouly identified. Because analysing all the countries together is essential given the low amount of data to forecast and the trend appears to be similar for these countries, all the data will be kept for the remaining analyses.
+
+### Unit price seasonality changes
+
+The analysis of the seasonal change within a year indicates a specific recuring pattern with a peack in April and a decease until December.
+
+```{r}
+doy <- c("2020-01-01", "2020-04-01", "2020-07-01", "2020-10-01") %>% 
+  date() %>%
+  tibble(mon = month(., label = T), jul = month(.))
+
+ts_plot <- data_ts %>% 
+  mutate(year = year(time),
+         month = month(time)) %>% 
+  ggplot(aes(month, unit_price)) +
+  geom_point(aes(colour = as.factor(year)), alpha = 0) + 
+  geom_smooth(
+    aes(colour = as.factor(year)), 
+    formula = y ~ x, 
+    method = "loess", 
+    span = 1, 
+    se = FALSE
+  ) +
+  # geom_smooth(
+  #   formula = y ~ x, 
+  #   method = "loess", 
+  #   span = 1, 
+  #   se = FALSE,
+  #   color = "red",
+  #   size = 2,
+  #   linetype = "dashed"
+  # ) +
+  scale_x_continuous("", breaks = doy$jul, labels = doy$mon) +
+  scale_y_continuous(
+    "Average unit price", 
+    labels = scales::dollar_format(suffix = "", prefix = "€")) +
+  scale_colour_viridis_d("") +
+  guides(
+    color = guide_legend(title.position = "top")
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom"
+  )
+
+ggMarginal(ts_plot, type = "density", groupColour = TRUE, margins = "y")
+```
+
+It is also interesting to observe that prices increase with the years.

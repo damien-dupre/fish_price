@@ -1,0 +1,45 @@
+:root {
+  --background: whitesmoke;
+  --pagedjs-width: A4;
+  --pagedjs-height: A4;
+  --color-paper: white;
+  --color-mbox: rgba(0, 0, 0, 0.2);
+  --running-title-width: 2.5in;
+  --screen-pages-spacing: 5mm;
+  --primary_color: #404040;
+  --secondary_color: #ED5259;
+}
+
+img[src*="#smaller"]{
+  height: 200px;
+}
+
+img[src*="#fit"]{
+  height: 400px;
+}
+
+.left-column {
+  padding-top: 15px;
+}
+
+.left-column.no-padding{
+  padding-top: 0;
+}
+
+img[src*="#smallest"] {
+  height: 100px;
+  max-width: 250px;
+}
+
+img[src*="#fit-more"] {
+  height: 335px;
+  width: 450px;
+}
+
+body .remark-slide-content {
+  color: #ffffff;
+}
+
+.inverse {
+  text-shadow: none;
+}
