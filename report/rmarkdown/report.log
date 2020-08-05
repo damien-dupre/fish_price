@@ -1,24 +1,24 @@
-This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.4.29)  30 APR 2020 18:33
+This is XeTeX, Version 3.14159265-2.6-0.999992 (TeX Live 2020/W32TeX) (preloaded format=xelatex 2020.7.20)  5 AUG 2020 16:31
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
 **report.tex
 (./report.tex
 LaTeX2e <2020-02-02> patch level 5
-L3 programming layer <2020-04-06> (c:/Users/dupred/AppData/Roaming/TinyTeX/texm
+L3 programming layer <2020-07-17> (c:/Users/dupred/AppData/Roaming/TinyTeX/texm
 f-dist/tex/latex/base/article.cls
 Document Class: article 2019/12/20 v1.4l Standard LaTeX document class
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/base/size10.clo
 File: size10.clo 2019/12/20 v1.4l Standard LaTeX file (size option)
 )
-\c@part=\count163
-\c@section=\count164
-\c@subsection=\count165
-\c@subsubsection=\count166
-\c@paragraph=\count167
-\c@subparagraph=\count168
-\c@figure=\count169
-\c@table=\count170
+\c@part=\count164
+\c@section=\count165
+\c@subsection=\count166
+\c@subsubsection=\count167
+\c@paragraph=\count168
+\c@subparagraph=\count169
+\c@figure=\count170
+\c@table=\count171
 \abovecaptionskip=\skip47
 \belowcaptionskip=\skip48
 \bibindent=\dimen134
@@ -73,13 +73,13 @@ Package: amsbsy 1999/11/29 v1.2d Bold Symbols
 y
 Package: amsopn 2016/03/08 v2.02 operator names
 )
-\inf@bad=\count171
+\inf@bad=\count172
 LaTeX Info: Redefining \frac on input line 227.
-\uproot@=\count172
-\leftroot@=\count173
+\uproot@=\count173
+\leftroot@=\count174
 LaTeX Info: Redefining \overline on input line 389.
-\classnum@=\count174
-\DOTSCASE@=\count175
+\classnum@=\count175
+\DOTSCASE@=\count176
 LaTeX Info: Redefining \ldots on input line 486.
 LaTeX Info: Redefining \dots on input line 489.
 LaTeX Info: Redefining \cdots on input line 610.
@@ -88,15 +88,15 @@ LaTeX Info: Redefining \cdots on input line 610.
 \big@size=\dimen137
 LaTeX Font Info:    Redeclaring font encoding OML on input line 733.
 LaTeX Font Info:    Redeclaring font encoding OMS on input line 734.
-\macc@depth=\count176
-\c@MaxMatrixCols=\count177
+\macc@depth=\count177
+\c@MaxMatrixCols=\count178
 \dotsspace@=\muskip16
-\c@parentequation=\count178
-\dspbrk@lvl=\count179
+\c@parentequation=\count179
+\dspbrk@lvl=\count180
 \tag@help=\toks16
-\row@=\count180
-\column@=\count181
-\maxfields@=\count182
+\row@=\count181
+\column@=\count182
+\maxfields@=\count183
 \andhelp@=\toks17
 \eqnshift@=\dimen138
 \alignsep@=\dimen139
@@ -133,24 +133,24 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \cmidrulesep=\dimen153
 \cmidrulekern=\dimen154
 \defaultaddspace=\dimen155
-\@cmidla=\count183
-\@cmidlb=\count184
+\@cmidla=\count184
+\@cmidlb=\count185
 \@aboverulesep=\dimen156
 \@belowrulesep=\dimen157
-\@thisruleclass=\count185
-\@lastruleclass=\count186
+\@thisruleclass=\count186
+\@lastruleclass=\count187
 \@thisrulewidth=\dimen158
 ) (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/tools/calc.sty
 Package: calc 2017/05/25 v4.3 Infix arithmetic (KKT,FJ)
-\calc@Acount=\count187
-\calc@Bcount=\count188
+\calc@Acount=\count188
+\calc@Bcount=\count189
 \calc@Adimen=\dimen159
 \calc@Bdimen=\dimen160
 \calc@Askip=\skip68
 \calc@Bskip=\skip69
 LaTeX Info: Redefining \setlength on input line 80.
 LaTeX Info: Redefining \addtolength on input line 81.
-\calc@Ccount=\count189
+\calc@Ccount=\count190
 \calc@Cskip=\skip70
 )
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/eso-pic/eso-pic.s
@@ -219,39 +219,42 @@ s
 /xparse.sty
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/l3kernel/expl3.st
 y
-Package: expl3 2020-04-06 L3 programming layer (loader) 
+Package: expl3 2020-07-17 L3 programming layer (loader) 
 
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/l3backend/l3backe
 nd-xdvipdfmx.def
-File: l3backend-xdvipdfmx.def 2020-03-12 L3 backend support: xdvipdfmx
-\g__graphics_track_int=\count190
+File: l3backend-xdvipdfmx.def 2020-06-29 L3 backend support: xdvipdfmx
+\g__graphics_track_int=\count191
 \l__pdf_internal_box=\box49
-\g__pdf_backend_object_int=\count191
-\g__pdf_backend_annotation_int=\count192
+\g__pdf_backend_object_int=\count192
+\g__pdf_backend_annotation_int=\count193
 ))
-Package: xparse 2020-03-06 L3 Experimental document command parser
-\l__xparse_current_arg_int=\count193
-\g__xparse_grabber_int=\count194
-\l__xparse_m_args_int=\count195
-\l__xparse_v_nesting_int=\count196
-)
+Package: xparse 2020-05-15 L3 Experimental document command parser
+
+(c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/l3packages/xparse
+/xparse-generic.tex
+\l__xparse_current_arg_int=\count194
+\g__xparse_grabber_int=\count195
+\l__xparse_m_args_int=\count196
+\l__xparse_v_nesting_int=\count197
+))
 Package: fontspec 2020/02/21 v2.7i Font selection for XeLaTeX and LuaLaTeX
 
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/fontspec/fontspec
 -xetex.sty
 Package: fontspec-xetex 2020/02/21 v2.7i Font selection for XeLaTeX and LuaLaTe
 X
-\l__fontspec_script_int=\count197
-\l__fontspec_language_int=\count198
-\l__fontspec_strnum_int=\count199
-\l__fontspec_tmp_int=\count266
-\l__fontspec_tmpa_int=\count267
-\l__fontspec_tmpb_int=\count268
-\l__fontspec_tmpc_int=\count269
-\l__fontspec_em_int=\count270
-\l__fontspec_emdef_int=\count271
-\l__fontspec_strong_int=\count272
-\l__fontspec_strongdef_int=\count273
+\l__fontspec_script_int=\count198
+\l__fontspec_language_int=\count199
+\l__fontspec_strnum_int=\count266
+\l__fontspec_tmp_int=\count267
+\l__fontspec_tmpa_int=\count268
+\l__fontspec_tmpb_int=\count269
+\l__fontspec_tmpc_int=\count270
+\l__fontspec_em_int=\count271
+\l__fontspec_emdef_int=\count272
+\l__fontspec_strong_int=\count273
+\l__fontspec_strongdef_int=\count274
 \l__fontspec_tmpa_dim=\dimen161
 \l__fontspec_tmpb_dim=\dimen162
 \l__fontspec_tmpc_dim=\dimen163
@@ -268,9 +271,9 @@ Package: geometry 2020/01/02 v5.9 Page Geometry
 y
 Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 )
-\Gm@cnth=\count274
-\Gm@cntv=\count275
-\c@Gm@tempcnt=\count276
+\Gm@cnth=\count275
+\Gm@cntv=\count276
+\c@Gm@tempcnt=\count277
 \Gm@bindingoffset=\dimen164
 \Gm@wd@mp=\dimen165
 \Gm@odd@mp=\dimen166
@@ -317,7 +320,7 @@ Package: lastpage 2015/03/29 v1.2m Refers to last page's name (HMM; JPG)
 .sty
 Package: multirow 2019/05/31 v2.5 Span multiple rows of a table
 \multirow@colwidth=\skip80
-\multirow@cntb=\count277
+\multirow@cntb=\count278
 \multirow@dima=\skip81
 \bigstrutjot=\dimen174
 )
@@ -329,7 +332,7 @@ Package: tabularx 2020/01/15 v2.11c `tabularx' package (DPC)
 \TX@old@col=\dimen177
 \TX@target=\dimen178
 \TX@delta=\dimen179
-\TX@cols=\count278
+\TX@cols=\count279
 \TX@ftn=\toks25
 )
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/latex/pgf/frontendlayer
@@ -389,14 +392,14 @@ gfkeysfiltered.code.tex
 \pgf@yd=\dimen191
 \w@pgf@writea=\write3
 \r@pgf@reada=\read2
-\c@pgf@counta=\count279
-\c@pgf@countb=\count280
-\c@pgf@countc=\count281
-\c@pgf@countd=\count282
+\c@pgf@counta=\count280
+\c@pgf@countb=\count281
+\c@pgf@countc=\count282
+\c@pgf@countd=\count283
 \t@pgf@toka=\toks30
 \t@pgf@tokb=\toks31
 \t@pgf@tokc=\toks32
-\pgf@sys@id@count=\count283
+\pgf@sys@id@count=\count284
 
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer
 /pgf.cfg
@@ -416,13 +419,13 @@ File: pgfsys-dvipdfmx.def 2020/01/08 v3.1.5b (3.1.5b)
 /pgfsys-common-pdf.def
 File: pgfsys-common-pdf.def 2020/01/08 v3.1.5b (3.1.5b)
 )
-\pgfsys@objnum=\count284
+\pgfsys@objnum=\count285
 )))
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer
 /pgfsyssoftpath.code.tex
 File: pgfsyssoftpath.code.tex 2020/01/08 v3.1.5b (3.1.5b)
-\pgfsyssoftpath@smallbuffer@items=\count285
-\pgfsyssoftpath@bigbuffer@items=\count286
+\pgfsyssoftpath@smallbuffer@items=\count286
+\pgfsyssoftpath@bigbuffer@items=\count287
 )
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/systemlayer
 /pgfsysprotocol.code.tex
@@ -441,7 +444,7 @@ hutil.code.tex)
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfmat
 hparser.code.tex
 \pgfmath@dimen=\dimen192
-\pgfmath@count=\count287
+\pgfmath@count=\count288
 \pgfmath@box=\box51
 \pgfmath@toks=\toks33
 \pgfmath@stack@operand=\toks34
@@ -467,7 +470,7 @@ hfunctions.misc.code.tex)
 hfunctions.integerarithmetics.code.tex)))
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfmat
 hfloat.code.tex
-\c@pgfmathroundto@lastzeros=\count288
+\c@pgfmathroundto@lastzeros=\count289
 ))
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/math/pgfint
 .code.tex)
@@ -507,7 +510,7 @@ File: pgfcorescopes.code.tex 2020/01/08 v3.1.5b (3.1.5b)
 \pgfpic=\box52
 \pgf@hbox=\box53
 \pgf@layerbox@main=\box54
-\pgf@picture@serial@count=\count289
+\pgf@picture@serial@count=\count290
 )
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/
 pgfcoregraphicstate.code.tex
@@ -542,8 +545,8 @@ File: pgfcorearrows.code.tex 2020/01/08 v3.1.5b (3.1.5b)
 pgfcoreshade.code.tex
 File: pgfcoreshade.code.tex 2020/01/08 v3.1.5b (3.1.5b)
 \pgf@max=\dimen272
-\pgf@sys@shading@range@num=\count290
-\pgf@shadingcount=\count291
+\pgf@sys@shading@range@num=\count291
+\pgf@shadingcount=\count292
 )
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/basiclayer/
 pgfcoreimage.code.tex
@@ -617,7 +620,7 @@ Package: tikz 2020/01/08 v3.1.5b (3.1.5b)
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/libraries/p
 gflibraryplothandlers.code.tex
 File: pgflibraryplothandlers.code.tex 2020/01/08 v3.1.5b (3.1.5b)
-\pgf@plot@mark@count=\count292
+\pgf@plot@mark@count=\count293
 \pgfplotmarksize=\dimen277
 )
 \tikz@lastx=\dimen278
@@ -632,19 +635,19 @@ File: pgflibraryplothandlers.code.tex 2020/01/08 v3.1.5b (3.1.5b)
 \tikz@figbox@bg=\box58
 \tikz@tempbox=\box59
 \tikz@tempbox@bg=\box60
-\tikztreelevel=\count293
-\tikznumberofchildren=\count294
-\tikznumberofcurrentchild=\count295
-\tikz@fig@count=\count296
+\tikztreelevel=\count294
+\tikznumberofchildren=\count295
+\tikznumberofcurrentchild=\count296
+\tikz@fig@count=\count297
 
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/modules/pgf
 modulematrix.code.tex
 File: pgfmodulematrix.code.tex 2020/01/08 v3.1.5b (3.1.5b)
-\pgfmatrixcurrentrow=\count297
-\pgfmatrixcurrentcolumn=\count298
-\pgf@matrix@numberofcolumns=\count299
+\pgfmatrixcurrentrow=\count298
+\pgfmatrixcurrentcolumn=\count299
+\pgf@matrix@numberofcolumns=\count300
 )
-\tikz@expandcount=\count300
+\tikz@expandcount=\count301
 
 (c:/Users/dupred/AppData/Roaming/TinyTeX/texmf-dist/tex/generic/pgf/frontendlay
 er/tikz/libraries/tikzlibrarytopaths.code.tex
@@ -1082,11 +1085,11 @@ LaTeX Font Warning: Some font shapes were not available, defaults substituted.
 
  ) 
 Here is how much of TeX's memory you used:
- 16321 strings out of 481455
- 371645 string characters out of 5927239
- 639604 words of memory out of 5000000
- 33326 multiletter control sequences out of 15000+600000
- 532960 words of font info for 47 fonts, out of 8000000 for 9000
+ 16330 strings out of 481679
+ 372044 string characters out of 5930859
+ 644849 words of memory out of 5000000
+ 33108 multiletter control sequences out of 15000+600000
+ 535710 words of font info for 52 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  65i,13n,74p,432b,341s stack positions out of 5000i,500n,10000p,200000b,80000s
 

@@ -5,3 +5,6 @@
 .here
 temp
 data_raw
+optimisations.R
+report/bookdown
+report/pagedown
